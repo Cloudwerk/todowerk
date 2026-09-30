@@ -38,7 +38,7 @@
   "dependencies": {
     "@fluentui/react-components": "^9.74.9",
     "@fluentui/react-icons": "^2.0.343",
-    "@microsoft/teams-js": "^2.56.0",
+    "@microsoft/teams-js": "^2.57.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^8.4.0"
