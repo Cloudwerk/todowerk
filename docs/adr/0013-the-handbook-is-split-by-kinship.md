@@ -1,9 +1,9 @@
 # The Handbook is split by kinship
 
-TodoWerk documents itself for two readers who are not contributors — the **Handbook**: a Guide for
-the person using it and an Administrator's Guide for the person deciding whether to allow it — and
-serves an About Page because a manifest has to name something that does not ask for a sign-in.
-These live in two places, and the line between them is kinship rather than convenience. The About
+TodoWerk documents itself for two readers who are not contributors. The **Handbook** is a Guide for
+the person using it and an Administrator's Guide for the person deciding whether to allow it.
+TodoWerk also serves an About Page, because a manifest has to name something that does not ask for
+a sign-in. These live in two places, and the line between them is kinship rather than convenience. The About
 Page and the Administrator's Guide live **with the application**: markdown in `handbook/`, embedded
 and rendered by the machinery that already serves the terms of use and the privacy notice, at
 `/about` and `/administrators`, on every deployment, Self-Host included. The Guide is published
@@ -12,8 +12,8 @@ separately, for the Hosted Service alone, and is not part of this repository. De
 ## Why the Administrator's Guide lives with the application
 
 It is the privacy notice's sibling in every respect that matters: the same reader, read at the same
-moment — a consent decision — no pictures, exact, and at an address that stays put for the life of
-a listing, because `publisherDocsUrl` is submitted once and re-validated long afterwards. Everything
+moment (a consent decision), no pictures, exact, and at an address that stays the same for the life
+of a listing, because `publisherDocsUrl` is submitted once and re-validated long afterwards. Everything
 the privacy notice needed — an anonymous page on the deployment's own domain, an operator named from
 configuration, a startup warning when nobody is named — the Administrator's Guide needs identically,
 and it is one more embedded resource on machinery that exists. And a Self-Host's administrator is
@@ -99,8 +99,8 @@ single source of itself; the Administrator's Guide links to it rather than resta
 ## Amendment (M7): the Handbook is reached from one control, not from three places
 
 The decision above says where each half of the Handbook is served and who serves it. It said almost
-nothing about how a person signed into TodoWerk reaches either, and what grew in that silence was
-three unrelated routes: the Guide as a text link in the row of screen names, the Administrator's
+nothing about how a person signed into TodoWerk reaches either, and without a decision three
+unrelated routes grew: the Guide as a text link in the row of screen names, the Administrator's
 Guide from the two surfaces that ask for a Tenant Consent approval, and the About Page from nowhere
 at all — though the App Package names it as the installation's support link, so an administrator
 arrives on it from the Teams admin centre and the product itself never offered it.
@@ -109,8 +109,8 @@ They are now one control in the header: a help button carrying the Guide where t
 About Page, the Administrator's Guide, and below a divider the terms of use and the privacy notice.
 The set and its order are the served documents' own — `DocumentNav.For` — so a reader meets the same
 five in the same order whether they are inside the product or on one of the pages. The divider is
-where this ADR's "beside the terms of use and the privacy notice but not among them" lands in the
-menu.
+where the Handbook entry in [CONTEXT.md](../../CONTEXT.md), "beside the terms of use and the privacy
+notice but not among them", lands in the menu.
 
 Two things do not change. The Guide is still the one entry that can be absent, on the same
 condition and from the same endpoint: a Self-Host draws no entry rather than a dead one. And the
@@ -118,24 +118,23 @@ Administrator's Guide is still linked from the Tenant Consent invitation, which 
 administrator meets the decision the page is written for — named there now, and described, so the
 same page is recognisable in both places.
 
-What this left undone was stated rather than hidden, and both halves are now closed. See the
-amendment below.
+This amendment left two things undone and said so. The amendment below closes both.
 
 ## Amendment (M7): the control is outside the sign-in, and the list has one source
 
 The amendment above left two things open, and named them. Both are settled.
 
-**The control does not wait for a session.** It sat inside the header's signed-in half, so the one
+The control does not wait for a session. It sat inside the header's signed-in half, so the one
 reader this ADR insists the pages are anonymous *for* — an administrator deciding whether to allow
 the product, somebody evaluating it who never will sign in — met the sign-in card and no route to
 either page. The screens and the session controls stay behind the sign-in, because those belong to
 somebody; the documents do not, and neither does the way to them. `/api/handbook` was already
 anonymous, so nothing had to be opened to do it.
 
-**The set, the order and the wording have one source.** The claim above — that a reader meets the
-same five in the same order inside the product and on the pages — was two lists agreeing by
-inspection, and by the time it was written they had already stopped: the menu
-offered the Guide first and the served pages offered it third. Nothing failed. `GET /api/handbook`
+The set, the order and the wording have one source. The claim above, that a reader meets the same
+five in the same order inside the product and on the pages, rested on two lists that agreed by
+inspection. By the time it was written they had already stopped agreeing: the menu offered the
+Guide first and the served pages offered it third. Nothing failed. `GET /api/handbook`
 now answers with `DocumentNav`'s own list rather than with the Guide's address alone, and the menu
 renders what it is given, divider included — the divider from the group each entry carries, so a
 sixth document lands on the right side of it without anybody remembering a line of code exists. The

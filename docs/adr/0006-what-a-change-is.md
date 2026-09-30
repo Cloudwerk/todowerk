@@ -2,11 +2,10 @@
 
 > Widened twice by [ADR-0014](0014-marker-rules-are-a-fourth-change.md). It adds a fourth shape,
 > **Apply Markers**, which carries neither source Hashtags nor a target Spelling and is stated
-> rather than derived; its later amendment adds a fifth, **Remove Markers**, which is the same write
-> in the other direction and is scoped by Marker rather than by Hashtag. Everything below about the
-> machinery — the plan, the journal, the queue, exclusivity, cancel, undo and the ceiling — is true
-> of all five; the sentences about what a Change *is made of* describe the three this record was
-> written for.
+> rather than derived. Its later amendment adds a fifth, **Remove Markers**: the same write in the
+> other direction, scoped by Marker instead of by Hashtag. Everything below about the machinery (the
+> plan, the journal, the queue, exclusivity, cancel, undo and the ceiling) is true of all five. The
+> sentences about what a Change *is made of* describe the three this record was written for.
 
 A Change carries a set of source Hashtags and one target Spelling, and rewrites every
 Occurrence of those Hashtags to that Spelling. Which of the three operations the user
@@ -30,7 +29,7 @@ character — spacing, punctuation, the rest of the sentence — is left exactly
 TodoWerk is a hashtag manager, not a title editor, and the smallest defensible edit is the
 one a user can predict.
 
-The consequence is accepted rather than smoothed over: merging `#kunde` into `#customer` on
+The consequence is accepted: merging `#kunde` into `#customer` on
 *"#kunde and #customer"* produces *"#customer and #customer"*, and normalising *"#Work #work
 planning"* produces *"#Work #Work planning"*. Collapsing the duplicate would mean deciding
 which one survives and what happens to the whitespace around it, and it would turn undo from
@@ -48,7 +47,7 @@ direction for the index; here it is merely restrictive, and that trade is delibe
 
 `Update todoTask` documents two request headers, `Authorization` and `Content-Type`. There is
 no `If-Match`, and `todoTask` carries no ETag to send in one — Planner has both, To Do does
-not. There is no compare-and-swap to be had, at any price.
+not. There is no compare-and-swap to be had.
 
 So each task is re-read from Graph immediately before it is written, its Hashtags re-extracted
 from the title that comes back, and the rewrite applied to *that* title. If the Hashtag is no
@@ -57,8 +56,7 @@ a tag there to change. The Change Journal records the title actually read, never
 preview showed, so undo restores what was really there.
 
 A race window between that read and the PATCH remains, and no To Do API can close it. It is
-written down here rather than papered over, and it is the reason preview counts are advisory
-and the UI says so.
+recorded here, and it is the reason preview counts are advisory and the UI says so.
 
 Titles are read from Graph for this purpose and never taken from the index: `IndexedTask.Title`
 is truncated to the display column and is kept for showing and comparing, not for writing back.
@@ -67,12 +65,12 @@ is truncated to the display column and is kept for showing and comparing, not fo
 
 Writes go through a method added to `GraphGateway`, sequentially, one task per request.
 
-`$batch` was the obvious alternative and does not pay. Graph caps a batch at 20 requests; the
-Outlook service runs at most four of them in parallel regardless, so the ceiling on
+`$batch` was the obvious alternative, and it does not help. Graph caps a batch at 20 requests;
+the Outlook service runs at most four of them in parallel regardless, so the ceiling on
 concurrency is four either way. Worse, a throttled item inside a batch comes back as a per-item
-`429` inside an overall `200`, which no SDK retries for you — so batching means reimplementing
+`429` inside an overall `200`, which no SDK retries for you. Batching would mean reimplementing
 `Retry-After` handling, the one-shot 401 refresh, the host allowlist and the error mapping that
-the gateway already has, for a second transport, in exchange for fewer round trips against a
+the gateway already has, for a second transport. The gain would be fewer round trips against a
 service that will not run them any faster.
 
 If a live mailbox proves this too slow, the measurement is the thing to bring back to this

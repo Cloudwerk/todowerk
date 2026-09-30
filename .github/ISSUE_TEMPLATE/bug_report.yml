@@ -8,11 +8,11 @@ body:
       value: |
         Thanks for taking the time to file this.
 
-        **Security vulnerabilities do not belong here.** Use the Security tab's
-        private reporting, or see
-        [SECURITY.md](https://github.com/Cloudwerk/todowerk/blob/main/SECURITY.md).
+        **Security vulnerabilities do not belong here.**
+        [SECURITY.md](https://github.com/Cloudwerk/todowerk/blob/main/SECURITY.md)
+        says how to report one privately.
 
-        TodoWerk is in early development and has no release. See
+        TodoWerk 1.0.2 is the first release. See
         [docs/status.md](https://github.com/Cloudwerk/todowerk/blob/main/docs/status.md)
         for what works today and what is known to be missing.
 
@@ -57,9 +57,9 @@ body:
   - type: input
     id: commit
     attributes:
-      label: Commit
-      description: The commit SHA or branch you are running. There is no release yet.
-      placeholder: 98180f6
+      label: Version or commit
+      description: The release version, or the commit SHA or branch you are running.
+      placeholder: 1.0.2 or 98180f6
     validations:
       required: true
 
@@ -85,7 +85,7 @@ body:
       label: Logs
       description: |
         Relevant server log output or browser console errors. This is rendered as
-        code, so no backticks needed.
+        code, so you do not need backticks.
       render: shell
     validations:
       required: false

@@ -2,21 +2,22 @@
 
 Last updated: 2026-09-30.
 
-TodoWerk is in early development, and as of M2 it does both halves of the thing it is for:
+TodoWerk 1.0.2 is the first release. As of M2 it does both halves of the thing it is for:
 it reads the hashtags out of your Microsoft To Do tasks and shows you what you actually
-have, and it changes them when you say so. M3 adds the tenant around that — one approval
+have, and it changes them when you say so. M3 adds the tenant around that: one approval
 for everybody, a screen showing an organisation its own numbers, and the first route out.
 M4 is complete: it puts the whole thing inside Microsoft Teams, walked against a real tenant on
 Teams on the desktop, Teams on the web, and Teams on a real Android device, with a Change
 previewed, run and undone against a real mailbox through the tab. Two cells of that walk could
-not be performed and are written down below rather than softened — Teams on the web in Safari, and the first-ever user of a tenant that has not granted
-Tenant Consent. Read every sentence about those two as a claim about code.
-There is no release and nothing supported to install: CI publishes a container image to
-GitHub's registry on every push to `main`, but it is a build artefact rather than a release —
-undocumented, carrying no version number anybody has promised anything about, and nobody's
-promise at all until M6 packages self-hosting properly. It is at least identifiable: every image
-is tagged `sha-<commit>` as well as `latest`, and a running deployment names the commit it was
-built from at `/version`.
+not be performed and are recorded below as gaps: Teams on the web in Safari, and the first-ever
+user of a tenant that has not granted Tenant Consent. Read every sentence about those two as a
+claim about code.
+The first release is two things: CloudWerk's Hosted Service, listed in the Microsoft Teams
+Store, and this repository, now public. Self-hosting is available as is: it works and is
+documented, but CloudWerk makes no support commitment for it. CI publishes a container image
+to GitHub's registry on every push to `main`. Images carry no version tag yet: each one is
+tagged `sha-<commit>` as well as `latest`, and a running deployment names the commit it was
+built from at `/version`, so pin a deployment to a `sha-` tag.
 
 ## What works today
 
@@ -35,10 +36,9 @@ how much it is used, and anybody can have everything it holds about them destroy
 Standing behind it:
 
 - The hashtag index. A background scan reads every task list through Graph's delta
-  endpoint — Flagged Emails included, which this page once said could not be read and which a
-  walk against a real tenant indexed some seven hundred tasks from; that contradiction is settled
-  below — and extracts the hashtags from task titles, following the grammar
-  [ADR-0005](adr/0005-what-a-hashtag-is.md) settled — `#Work` and `#work` are one
+  endpoint, Flagged Emails included: a walk against a real tenant indexed some seven hundred
+  tasks from it (see below). It extracts the hashtags from task titles, following the grammar
+  [ADR-0005](adr/0005-what-a-hashtag-is.md) settled: `#Work` and `#work` are one
   Hashtag with two Spellings, not two rows. The first pass over a busy account takes
   minutes, so it runs off a queue in the database rather than inside a request, and
   it writes its progress per list as it goes: a deploy mid-scan resumes rather than
@@ -71,9 +71,9 @@ Standing behind it:
 - The write path. One PATCH per task, sequential, through the same gateway the reads go
   through. Every task is re-read immediately before it is written and the rewrite applied to
   what came back, because `todoTask` carries no ETag and `Update todoTask` accepts no
-  `If-Match` — there is no compare-and-swap to be had at any price. A task whose hashtag has
+  `If-Match`, so there is no compare-and-swap at all. A task whose hashtag has
   gone by then is skipped rather than failed, and the count the preview showed is therefore
-  advisory, which the UI says rather than hides. Only the hashtag's own text is rewritten;
+  advisory, which the UI says. Only the hashtag's own text is rewritten;
   spacing, punctuation and the rest of the sentence are left exactly as they were. Watched
   against a real mailbox since M3: a title-only PATCH is accepted
   and leaves a task's due date, note, importance and checklist steps untouched, and a task
@@ -113,12 +113,11 @@ Standing behind it:
   lists or compares Hashtags across people. Any signed-in user of the tenant may see it; there
   is no role check and no administrator concept. Below a configurable floor of five identifiable
   people the statistics are absent from the response and from the screen, with no placeholder,
-  because a total across three people is those three people's data wearing a statistics label —
-  and somebody who has been forgotten counts toward the total shown but never toward the floor,
-  because the figures describe only the people still on record. The floor holds in both
-  directions: it is measured on every request, so a tenant that had the statistics loses them
-  again when erasures take it back below five — deliberate, and worth knowing before somebody
-  reports the vanished panel as a defect. The consent invitation has no floor and renders anyway,
+  because a total across three people is still those three people's data. Somebody who has been
+  forgotten counts toward the total shown but never toward the floor, because the figures
+  describe only the people still on record. The floor is measured on every request, so a tenant
+  that had the statistics loses them again when erasures take it back below five. That is
+  deliberate, and a panel that vanishes this way is not a defect. The consent invitation has no floor and renders anyway,
   which is how the feature gets found in the tenants most likely to need it.
 - The Tenant Member record, and the fact that it is the smallest thing that could answer the
   question: a tenant, an Entra object id, a first sign-in and a last one. No name, no UPN, no
@@ -160,20 +159,20 @@ Standing behind it:
   popup would loop through it forever.
 - The blocked-cookie card, and the one signature that produces it. Safari refuses unpartitioned
   third-party cookies outright, and inside the Teams frame that is exactly what TodoWerk's session
-  is. The tab detects the pair that means it — the exchange succeeded, and the request immediately
-  after it came back 401 — names the cause in a sentence, offers to open TodoWerk in a browser, and
-  does not retry, because retrying produces the same answer every time. Mitigated rather than fixed,
-  and decided that way with the trade-off in view. The same condition reaches the server log as
-  well as the screen: only the tab sees both halves of the pair, so the confirming request wears a
-  header saying what it is and a 401 answered to a request wearing it is logged as the browser
-  refusing the cookie rather than as somebody arriving signed out. The header decides a log line and
-  no access, and no more than sixty of those diagnostics are written per minute, with the
-  sixty-first line saying so rather than going quiet — an anonymous caller can produce a 401 at
-  will, and the rate limiter never sees one, because authorization short-circuits an
-  unauthenticated request before it runs. That line carries the user agent, which is the only place
-  TodoWerk writes one — a request-scoped diagnostic and not part of what it stores about a person
-  ([ADR-0009](adr/0009-what-todowerk-stores-about-a-person.md)) — because which clients refuse the
-  cookie is exactly the open question.
+  is. The tab detects the pair that means it (the exchange succeeded, and the request immediately
+  after it came back 401), names the cause in a sentence, offers to open TodoWerk in a browser, and
+  does not retry, because retrying produces the same answer every time. This mitigates the problem
+  without fixing it, and was decided that way with the trade-off in view. The same condition
+  reaches the server log as well as the screen. Only the tab sees both halves of the pair, so the
+  confirming request wears a header saying what it is, and a 401 answered to a request wearing it
+  is logged as the browser refusing the cookie rather than as somebody arriving signed out. The
+  header decides a log line and no access. No more than sixty of those diagnostics are written per
+  minute, and the sixty-first line says so rather than going quiet: an anonymous caller can
+  produce a 401 at will, and the rate limiter never sees one, because authorization
+  short-circuits an unauthenticated request before it runs. That line carries the user agent,
+  because which clients refuse the cookie is exactly the open question. It is the only place
+  TodoWerk writes one, and it is a request-scoped diagnostic, not part of what TodoWerk stores
+  about a person ([ADR-0009](adr/0009-what-todowerk-stores-about-a-person.md)).
 - The tab's theme, which is the Teams theme rather than CloudWerk's. Light, dark and high contrast
   map onto Fluent's own Teams ramps, arrive in the tab's URL through the manifest's placeholders so
   the first paint is already right, and re-theme without a reload when somebody changes them. The
@@ -214,8 +213,8 @@ Standing behind it:
 - Seat usage, reported on an interactive sign-in and at most once per person per day. What goes out
   is the licence id and a keyed hash of the object id; the object id itself never leaves the
   server, and TodoWerk holds no licence key to send. A figure and a "this person is back" signal, never a gate — a Tenant Licence is unlimited and a
-  Personal Licence is one person. A background scan reports nothing, and a Self-Host reports nothing
-  to nobody. A report the portal declines to store is a warning naming the portal's own word for
+  Personal Licence is one person. A background scan reports nothing, and a Self-Host reports
+  nothing at all. A report the portal declines to store is a warning naming the portal's own word for
   why, and a seat counted above the licence's seat limit is a warning of its own, carrying both
   figures and stopping nobody.
 - The App Package, and the script that builds it. One source manifest with placeholders; a
@@ -262,7 +261,7 @@ Standing behind it:
   ([ADR-0007](adr/0007-one-consent-grant.md)) — including for a user who only ever looks,
   because the worker that performs a write has no browser to prompt through.
 - A durable token cache: MSAL's cache lives in the SQL database, encrypted at rest
-  through Data Protection, so a deploy no longer signs everyone out and the
+  through Data Protection, so a deploy does not sign everyone out and the
   background jobs [ADR-0002](adr/0002-backend-held-tokens.md) exists for can hold a
   refresh token with no browser attached. Entries slide out 90 days after last use;
   sign-out evicts the account's entry. An integration test proves the round trip —
@@ -278,20 +277,19 @@ Standing behind it:
   M3 does happens *because* somebody signed in, and until this existed the suite minted cookies
   and could not express that.
 
-  Walking it also settled what the nonce is worth here, which nobody had checked: on pure
-  authorization-code flow ASP.NET Core mints a nonce, sends it and reads its cookie back, but
-  compares nothing — a callback whose token repeats another flow's nonce, or carries none at all,
-  still authenticates. Measured both ways rather than read. Not something TodoWerk opened and not
-  worth hand-rolling protocol validation over: the identity comes from a single-use code redeemed
+  Walking it also settled what the nonce is worth here: on pure authorization-code flow
+  ASP.NET Core mints a nonce, sends it and reads its cookie back, but compares nothing. A callback
+  whose token repeats another flow's nonce, or carries none at all, still authenticates; both
+  cases were measured, not reasoned about. TodoWerk did not open this gap, and it is not worth
+  hand-rolling protocol validation over: the identity comes from a single-use code redeemed
   server-side with the client secret, under PKCE, tied to the correlation cookie, and the nonce
-  matters in the hybrid and implicit flows TodoWerk does not use. A test pins the weaker truth so
-  that nobody reads the nonce in the traffic and assumes it is load-bearing, and fails the day a
-  framework upgrade starts enforcing it.
+  matters in the hybrid and implicit flows TodoWerk does not use. A test pins the weaker behaviour
+  so that nobody reads the nonce in the traffic and assumes it protects anything, and it fails the
+  day a framework upgrade starts enforcing it.
 - Continuous integration on every pull request: build, unit tests, architecture
-  tests, integration tests that boot the real application, and — since M2 — the client's
-  own suite over the state it holds before the server has confirmed it. Demonstrated rather
-  than assumed since the first pull request the repository merged after M0, which was also the
-  first CI run over everything committed straight to `main` in between.
+  tests, integration tests that boot the real application, and, since M2, the client's
+  own suite over the state it holds before the server has confirmed it. `main` is protected: a
+  pull request needs the `build-and-test` and `cla` checks.
 - A deployment that can say which build it is. CI tags every image `sha-<commit>` as well as
   `latest`, and `GET /version` answers `{"version", "commit", "licensing"}` — the first two read
   from the informational version the compiler stamps on the assembly, the third `absent` or
@@ -301,24 +299,25 @@ Standing behind it:
   outside, an unchanged deployment cannot be told apart from a fixed one. The third field does the
   same for configuration, because one commit admits everybody with the section absent and can deny
   with it configured, and nothing else visible from outside tells the two apart.
-- A Contributor License Agreement check that works. It never had before: the branch it
-  records signatures on had never been created, so the first human pull request the
-  repository received failed a gate that could not have passed. Every earlier pull request
-  was Dependabot's, which the allowlist skips, so nothing had ever exercised it.
+- A Contributor License Agreement check. It records signatures on the `cla-signatures` branch,
+  and creates that branch and its signature store itself when they are missing, so it does not
+  depend on anybody having set them up by hand. Dependabot's pull requests are on its allowlist
+  and skip it.
 
 780 .NET tests and 243 client tests, and the build treats every compiler and analyzer warning
-as an error. The client build now also checks its own output rather than its imports: the browser
+as an error. The client build also checks its own output rather than its imports: the browser
 bundle is asserted to contain no TeamsJS and the consent popup's landing document to contain no
-framework, both read off the built chunks, because one shared component reaching for `app.openLink()`
-would put a Teams handshake into every browser page load with nothing on screen to say so. The fake Graph the write tests run against now truncates a title at 255
-characters exactly as the real service does, so the class of defect the first real write found —
-a fake more permissive than Microsoft — cannot hide there again.
+framework, both read off the built chunks, because one shared component reaching for
+`app.openLink()` would put a Teams handshake into every browser page load with nothing on screen
+to say so. The fake Graph the write tests run against truncates a title at 255 characters exactly
+as the real service does, so a fake more permissive than Microsoft, the class of defect the first
+real write found, cannot hide there again.
 
-M4 went through a review pass before it was committed, and everything it found is fixed. The one
-worth knowing is that the tab did not work at all in the case it was built for: MSAL files an
+M4 went through a review pass before it was committed, and everything it found is fixed. The most
+serious finding was that the tab did not work at all in the case it was built for: MSAL files an
 on-behalf-of result in a different partition of the token cache from an authorization-code one, so
-a tenant that had granted Tenant Consent would have seen the tab sign somebody in perfectly and then
-fail every single Graph call afterwards with "reconnect required" — a Workbench full of nothing, in
+a tenant that had granted Tenant Consent would have seen the tab sign somebody in and then
+fail every Graph call afterwards with "reconnect required". That is an empty Workbench, in
 the configuration the whole milestone is about. Nothing in the suite noticed, because the tests
 asserted on the session rather than on what the session could do; the two that now exist ask the
 tab's session to read a task list and ask a background scan to do the same. Of the seven others, two
@@ -328,10 +327,10 @@ Workbench against a session it had just destroyed; and one was the framing relax
 every path under `/teams`, where the SPA's fallback would have served the browser Workbench with the
 tab's headers.
 
-M3 went through a review pass before it was committed, and everything it found is fixed. The one
-worth knowing about is that any signed-in member of a tenant could have recorded a Tenant Consent
-grant nobody made — start the flow for the state cookie, then reach the callback directly with
-`admin_consent=True` — and nothing could ever undo it, so one user could have permanently hidden the
+M3 went through a review pass before it was committed, and everything it found is fixed. The most
+serious finding was that any signed-in member of a tenant could have recorded a Tenant Consent
+grant nobody made (start the flow for the state cookie, then reach the callback directly with
+`admin_consent=True`), and nothing could ever undo it, so one user could have permanently hidden the
 approval invitation from an organisation that had no other way in. The admin-consent flow returns no
 signed response, so that cannot be closed; what it cost was the assumption that a recorded grant is
 proof, and the screen now keeps an "approve again" route beside the record. Of the other seven, two
@@ -340,13 +339,13 @@ rather than on every pass, so a row the sync scheduler wrote back could survive 
 unreachable once the membership record was anonymised; and a purge that exhausted its retry bound
 while still deleting reported success, so erasure anonymised on top of a residue. The rest were a
 blanket `catch (DbUpdateException)` reading a deadlock as "somebody else won the race" in two stores,
-a `SweepInterval` that validation allowed up to a year while `PeriodicTimer` throws past 49 days —
-a boot crash from a setting that passed startup validation — a browser navigation answered with
+a `SweepInterval` that validation allowed up to a year while `PeriodicTimer` throws past 49 days
+(a boot crash from a setting that passed startup validation), a browser navigation answered with
 problem-JSON in the tab, and a nav link styled on a wrapper rather than on the anchor, so the header
 would have rendered browser-blue.
 
-A second adversarial pass ran over the finished milestone — one reviewer hunting what the first
-pass and the suite both missed — and its findings are fixed too. The one that mattered: the
+A second adversarial pass ran over the finished milestone, with one reviewer hunting what the
+first pass and the suite both missed, and its findings are fixed too. The most serious: the
 statistics floor was measured against the cumulative member count, which by design keeps the
 forgotten, so a tenant of six where five had erased themselves passed a floor of five while every
 figure on screen described the one identifiable colleague left — the exact inference the floor
@@ -373,10 +372,10 @@ configuration key bound to nothing, and a colliding React key. A ninth turned up
 writing this page: both write endpoints returned a `Location` header naming a route that
 does not exist.
 
-M1 went through the same exercise — three reviewers by lens, then two adversarial
-passes over the fixes themselves — and everything it found is fixed. Worth knowing what
-that turned up, because it is the kind of thing a green suite does not: an open redirect
-in the sign-in return URL, an inventory table whose column headers were never clickable,
+M1 went through the same exercise (three reviewers by lens, then two adversarial
+passes over the fixes themselves), and everything it found is fixed. It turned up the kind
+of thing a green suite does not: an open redirect
+in the sign-in return URL, an inventory table whose column headers could never be selected,
 and a single over-long hashtag that could wedge an account's scan permanently. The scan
 now holds a lease it renews as it works, and hands its row back on shutdown rather than
 freezing it for an hour. See the changelog for the rest.
@@ -386,7 +385,7 @@ Applying migrations is an explicit step in every environment — see
 
 ## What does not work yet
 
-No supported way to run this that is not from source. Nothing in TodoWerk
+Self-hosting has no support commitment: it is available as is. Nothing in TodoWerk
 manages another person's Hashtags, counts Hashtags across people, or lets one person change a
 colleague's tasks — that was the old app-only Org Mode, and
 [ADR-0008](adr/0008-tenant-consent-is-delegated.md) records why it will not be built. Outlook and
@@ -396,17 +395,15 @@ Entra registration name them and the walk covers them
 ([ADR-0010](adr/0010-teams-tab-session-and-framing.md), amended;
 [runbooks/teams-tab-walk.md](runbooks/teams-tab-walk.md)).
 
-Two things about the Teams tab are worth knowing before somebody reads them out of the code as
-mistakes. All three of TodoWerk's cookies are now `SameSite=None; Secure` and unpartitioned, and
+Two things about the Teams tab look like mistakes in the code and are not. All three of TodoWerk's cookies are now `SameSite=None; Secure` and unpartitioned, and
 framing is relaxed on the tab's own document path while every other document keeps
 `frame-ancestors 'none'` and `X-Frame-Options: DENY`. Both are decisions with their reasons written
 down in [ADR-0010](adr/0010-teams-tab-session-and-framing.md), and the first of them means the
 antiforgery double-submit pair has stopped being defence in depth and become the defence.
 
-Four gaps are worth naming specifically, because the code looks more finished than
-it is, and everything else outstanding is listed after them. Two others used to head this
-list, and both were closed on 2026-08-25 by walking them against a real tenant —
-each repaying the walk with a defect no fake could have shown.
+Four gaps are named here because the code looks more finished than it is; everything else
+outstanding is listed after them. Two earlier gaps were closed on 2026-08-25 by walking them
+against a real tenant, and each walk found a defect no fake could have shown.
 
 *No tenant has ever approved TodoWerk for real* is closed: the
 redirect URI is registered, Microsoft accepts the scope list as spelled, the consent screen
@@ -414,19 +411,19 @@ shows exactly the permissions sign-in shows an individual, an approval landed en
 is visible in Entra ID as a delegated admin-consent grant, and a second user then signed in
 with no consent prompt. The decline path was the find: the real redirect carries
 `admin_consent=True` *alongside* `error=consent_required` and no `tenant` parameter, so an
-administrator clicking Cancel was recorded as an approval — fixed the same day, and pinned by
-tests carrying the captured shapes rather than invented ones.
+administrator selecting Cancel was recorded as an approval. That was fixed the same day and is
+pinned by tests carrying the captured shapes, not invented ones.
 
 *No write has ever reached a real mailbox* is closed too, and the
 answers are in "What works today" above: `Update todoTask` takes a title-only body and leaves
 due dates, notes, importance and checklist steps alone; only the Hashtag's own text changes;
 both Spellings of one Hashtag are rewritten together; undo restores the exact prior title,
 lowercase included; a real 404 is skipped and the rest of the Change still runs. Throttling
-stayed unobserved, as it did in the first live-tenant run — a seven-task mailbox rate-limits
-nothing. The find was the title ceiling: Microsoft To Do keeps 255 characters and silently
+stayed unobserved, as it did in the first live-tenant run: a seven-task mailbox rate-limits
+nothing. The find was the title ceiling. Microsoft To Do keeps 255 characters and silently
 stores a truncated title rather than refusing an over-long one, which cut a Hashtag in half
-and left a journal row holding a title that never existed in the mailbox — so undo could
-never match it. Fixed by refusing the write instead.
+and left a journal row holding a title that never existed in the mailbox, so undo could
+never match it. TodoWerk now refuses that write.
 
 **Two cells of the Teams tab's walk could not be performed.** The walk itself is done
 (checklist in [docs/runbooks/teams-tab-walk.md](runbooks/teams-tab-walk.md)): the tab was loaded
@@ -451,46 +448,43 @@ Everything else on this page about the tab is now an observation. Those two are 
 
 **Flagged Emails was the id-collation defect, and the report about it was written after the
 fix.** This page said for a week that the list could not be read, while the Teams tab's walk had
-observed the opposite on the same real account — a screen reading, in round figures:
+observed the opposite on the same real account. The screen read, in round figures:
 
 ```text
 Flagged Emails — 700 tasks, synced 20 minutes ago
 720 tasks indexed
 ```
 
-The contradiction is closed, and the answer was size rather than kind. Nearly all of the account's
+The cause was the list's size, not its kind. Nearly all of the account's
 tasks are in that list, which makes it the only one large enough to page and the only one likely
 to hold a pair of Exchange ids differing in one letter's case. That pair is the id-collation
 defect: under the database's default collation the unique index over task ids rejected the second
 of two different tasks as a duplicate key, deterministically, so the list never finished indexing
-and reported itself as one that could not be read. It was met at some six hundred indexed tasks —
+and reported itself as one that could not be read. It was met at some six hundred indexed tasks,
 a count only reachable inside this list, because the others hold a handful of tasks between them.
 
-The dates say the rest. `20260811064210_GraphIdBinaryCollation` re-collated the id columns at
+The dates show the order. `20260811064210_GraphIdBinaryCollation` re-collated the id columns at
 06:42 on 2026-08-11 and the collation fix was closed within the hour; the report that Flagged
 Emails could not be read was written that evening, as a write-up of repeated earlier sightings it
 says outright had never been written down. The symptom was real and had already been repaired when
-somebody finally recorded it. Two tests in `IndexScanTests`
-now put the projection list through a first pass and a delta pass — the list had never been
-scanned in the suite at all — and the first of them fails with a duplicate key the moment that
-migration's collation is put back. Graph's delta endpoint serves the list like any other, which
+somebody recorded it. Two tests in `IndexScanTests` put the projection list through a first pass
+and a delta pass (the list had never been scanned in the suite at all), and the first of them
+fails with a duplicate key the moment that migration's collation is put back. Graph's delta endpoint serves the list like any other, which
 is what the report assumed it could not do.
 
 **Live-tenant verification is incomplete.** A first round trip against a real tenant
-has been run: sign-in, a live task-lists read, and the sign-out defect it
-surfaced — since fixed. A live scan then wedged a whole list on ids Microsoft Graph
-issues in mixed case and the database compared without regard to case (also
-fixed) — a defect nothing in the fake-Graph suite could reach, and the reason that
-exercise exists. Four defects came out of it in all, and all four are fixed — that id
-collation, a write failure reported as a read failure, a connection string the driver could not
-parse that still let the application start, and the Flagged Emails read, which was the id
-collation under another name and is described above. What it never produced is the other half
-of its checklist. Paging and
-throttling against live Graph went unobserved, because the tenant answered every
-request and rate-limited nothing, and the delta endpoint has still only ever run
-against a fake. The scan handles all three the way the documentation says to; nobody
-has watched it happen. This paragraph is what remains of that exercise: finishing the job
-needs a mailbox that misbehaves, not a ticket.
+has been run: sign-in, a live task-lists read, and a sign-out defect it surfaced, which is
+fixed. A live scan then wedged a whole list on ids Microsoft Graph issues in mixed case and the
+database compared without regard to case. That is fixed too; nothing in the fake-Graph suite
+could reach it, which is the reason the exercise exists. Four defects came out of it in all, and
+all four are fixed: that id collation, a write failure reported as a read failure, a connection
+string the driver could not parse that still let the application start, and the Flagged Emails
+read, which was the id collation under another name and is described above. What it never
+produced is the other half of its checklist. Paging and throttling against live Graph went
+unobserved, because the tenant answered every request and rate-limited nothing, and the delta
+endpoint has still only ever run against a fake. The scan handles all three the way the
+documentation says to; nobody has watched it happen. Finishing the exercise needs a mailbox
+that misbehaves.
 
 **The hashtag grammar is settled by argument, not by observation.** ADR-0005 fixes
 what a Hashtag is and the extractor implements it, but several of its rules are
@@ -506,7 +500,7 @@ Smaller than those four, and written down so that none of it has to be rediscove
 
 | Gap | Where it stands |
 |---|---|
-| Every existing user meets the reconnect path on upgrade | Sign-in now asks for `Tasks.ReadWrite` ([ADR-0007](adr/0007-one-consent-grant.md)), and a token-cache entry issued under `Tasks.Read` cannot silently widen: MSAL raises `MsalUiRequiredException`, the gateway maps it to reconnect-required, and background syncs stop until the user signs in again. In practice that is only whoever signed in before the scope widened — there is no release — and it is the reason the Workbench's sign-in offer now keys off a failure code rather than a matched sentence. |
+| Every existing user meets the reconnect path on upgrade | Sign-in now asks for `Tasks.ReadWrite` ([ADR-0007](adr/0007-one-consent-grant.md)), and a token-cache entry issued under `Tasks.Read` cannot silently widen: MSAL raises `MsalUiRequiredException`, the gateway maps it to reconnect-required, and background syncs stop until the user signs in again. In practice that is only whoever signed in before the scope widened, which predates the first release, and it is the reason the Workbench's sign-in offer now keys off a failure code rather than a matched sentence. |
 | The module boundary is enforced within a layer, not across layers | `ModuleBoundaryTests` checks that `Infrastructure.Changes` does not depend on `Infrastructure.Indexing`, and the same pair in each other layer. It does not check `Infrastructure.Changes` against `Domain.Indexing`, because the assemblies differ — and two places rely on exactly that: each queue's claim names the other's entity so that "never both at once for one user" can be one conditional `UPDATE` rather than a check with a window after it. Deliberate and commented at both call sites, but nothing stops a third use appearing that is not deliberate at all. |
 | The confirm dialog draws 200 pairs, not 1,000 | The dialog was specified with room for up to a thousand old-title/new-title pairs. The dialog renders the first two hundred and counts the rest ("…and 43 more"), because a thousand rows of two titles is a scroll nobody reads and a render cost on every keystroke of the target. The plan itself is unaffected — the ceiling is still a thousand tasks, and all of them are changed. If somebody wants to inspect all thousand, this is the thing to revisit. |
 | Two Pending rows for one user can still race into running together | The Change claim refuses while a scan is running and the scan claim refuses while a Change is running, both inside the claim's own `WHERE`. Two workers claiming simultaneously can still both see no live row and both win, because read-committed does not serialise the `EXISTS` against the other's uncommitted update. The consequence is the cosmetic one ADR-0006 already accepts — a half-renamed inventory moving under somebody watching — not a corrupt index, and it needs both timers to fire inside the same few milliseconds. Closing it properly means a lock hint or an application lock, which was not worth adding for a cosmetic race. |
@@ -516,15 +510,15 @@ Smaller than those four, and written down so that none of it has to be rediscove
 | Applying markers does not skip completed tasks | A task that is done carries its hashtags like any other, so an Apply Markers rewrites its title like any other — and so do Rename and Merge, which have never distinguished them either. The index does not know completion state: `IndexedTask` holds the title, the list and the last-modified moment, because that is what counting hashtags needs, and [ADR-0014](adr/0014-marker-rules-are-a-fourth-change.md) declined to widen it for this. Knowing would mean reading and storing a status per task and keeping it current through delta pages, which is a change to what TodoWerk holds about somebody rather than a filter on a query. Recorded rather than fixed: somebody who marks a hashtag they have used for years will find the emoji on tasks they finished last spring. |
 | A rule is carried by a Rename only when the Rename wrote something | "At least one task written" is the condition ([ADR-0014](adr/0014-marker-rules-are-a-fourth-change.md)), and it is asked of the plan rows at completion. A run that is resumed after its process was replaced counts the writes from every pass, because the question is asked of the table — but a Rename that wrote nothing leaves the rule on the old name, which is right, and one that wrote a single task moves it, which is also right and may surprise somebody who cancelled after the first task. |
 | Whether a marker is stale is answered from two sources, which agree by construction rather than by check | The stale count reads a task's hashtags off its Occurrences; a Remove's preview reads them off the stored title, through the same grammar the scan extracted the Occurrences with. Two readings of one fact, and nothing asserts they match. They cannot diverge on a title Microsoft To Do stores — it keeps 255 characters and the column holds 512 — so what would have to happen is the extractor changing between the scan that wrote the Occurrences and the read that plans the Change. Recorded rather than fixed: making the planner's reader hand back the keys, as the coverage reader already does, is a widening of that port for a divergence nobody has produced. |
-| A row kept only to keep a marker known is emptied by a Remove that reached every task carrying it, and not otherwise | A deleted rule's row goes when a Remove Markers has taken its emoji out of every block there was. "Every block there was" is asked strictly: a task passed over because its title is nothing but the markers being removed, or a list that has never been read end to end, makes the plan short of the emoji, and the row then stays however much the run wrote — a row dropped over an emoji still sitting in a real title would leave the block reader stopping in front of it, which is the artefact those rows exist to prevent. The person is offered the removal again next time, so this settles itself. What does not settle is a row whose emoji no task carries at all — a rule deleted before it was ever applied: there is nothing for a plan to write, so nothing ever reaches it and it stays until erasure. It is listed nowhere and offered nowhere; the cost is one row per emoji abandoned that way, which nothing but erasure now reclaims — it no longer costs anything at read time, since the coverage query stopped carrying a parameter per emoji. Emptying it would mean deleting a row on the strength of the index saying "no task has this", which is the one thing the index is not authoritative about. |
+| A row kept only to keep a marker known is emptied by a Remove that reached every task carrying it, and not otherwise | A deleted rule's row goes when a Remove Markers has taken its emoji out of every block there was. "Every block there was" is asked strictly: a task passed over because its title is nothing but the markers being removed, or a list that has never been read end to end, makes the plan short of the emoji, and the row then stays however much the run wrote — a row dropped over an emoji still sitting in a real title would leave the block reader stopping in front of it, which is the artefact those rows exist to prevent. The person is offered the removal again next time, so this settles itself. What does not settle is a row whose emoji no task carries at all — a rule deleted before it was ever applied: there is nothing for a plan to write, so nothing ever reaches it and it stays until erasure. It is listed nowhere and offered nowhere; the cost is one row per emoji abandoned that way, which nothing but erasure reclaims. It costs nothing at read time, because the coverage query carries no parameter per emoji. Emptying it would mean deleting a row on the strength of the index saying "no task has this", which is the one thing the index is not authoritative about. |
 | A rule remembers one retired marker, and two edits with a partial run between them can orphan one | A rule keeps the one Marker its titles carry that is not its own, and it is told what they carry when an Apply or its undo finishes — so a rule edited while its Apply was queued, and an undo that puts an old Marker back, both leave the rule able to reach what is out there. What it cannot do is remember two: change 🍞 to 🥐, apply, change to ☕, undo the Apply, and the titles the undo restored carry 🍞 while any it skipped for being edited since carry 🥐, and the rule can be told only one of them. The one it is not told stays in that title until a Remove Markers takes it, which is now something the person can ask for. ADR-0014 settled on one retired Marker deliberately, and this is the corner of it. |
 | The marker figures are as fresh as the last scan, and one of them reads low until it lands | What counts as marked is the block grammar, which the database cannot run — so the index stores the run of emoji each title opens with, and `GET /api/marker-rules` asks for the tasks where that is not empty and walks the runs in C#. Two queries however many rules there are, no query parameter per emoji, and a filtered index over the same predicate, so the read walks the marked tasks rather than every title. What it inherits is the freshness of the index: a title edited in Microsoft To Do since the last scan is counted as the scan left it, which the freshness chrome above the table already says of every figure on the page. The run is written by the ordinary scan write path, so a migration that adds the column backfills by clearing every delta link and letting the next sync re-read each list; until that lands the coverage and stale figures read nought while the inventory beside them is unaffected. |
 | The ceiling for an Apply or a Remove is measured against tasks that could need a write, not against tasks that do | The three Hashtag Changes exclude "already spelled that way" in SQL; a block cannot be excluded that way without the grammar going into the database. So a person with more than a thousand tasks carrying marked hashtags is refused an all-rules Apply with the count even on the second run, when almost nothing needs writing, and a Remove is refused on the same footing — its ceiling counts every task whose title holds any of their emoji, whether or not any of them is stale. Doing one rule, or one emoji, at a time is the way through it, as [ADR-0014](adr/0014-marker-rules-are-a-fourth-change.md) says — but the refusal will read as arbitrary to whoever meets it after a successful first run. |
 | The change history is capped at 50 | `ChangeStore` hands the Workbench the 50 most recent Changes. Thirty days of history is usually a handful, but somebody who makes a great many would find the oldest of them undoable in principle and invisible in practice. |
-| No test watches the application refuse to start | `ConfigurationValidationTests` used to boot the whole app and wait for the failure, and was green about four runs in five. The cause found is in the test host, not the product: under `WebApplicationFactory` startup validation runs on the entry point's own thread, after the host has been handed back and while `RunAsync` is disposing it, so what `CreateClient` throws is decided by scheduling — demonstrated, though at one boot in 300 and with a different symptom than the one reported, which never reproduced. The test now asks the startup validator directly and is deterministic. Two things are no longer watched by anything: the host actually stopping, and a `Program`-level `PostConfigure` that quietly repaired a bad setting. Both could be covered by moving `Program`'s composition into a method a test can call and start on its own thread; that was weighed and declined, because it reshapes the file every contributor reads first in order to suit a test. That prediction was met: two licensing tests written after this row booted the app and asserted on the throw, and failed under load exactly as described. Both now ask the validator, and `TestConventionTests` fails the build on the next test that asserts a boot throws — so what this row records is now the gap in coverage rather than a warning about what will flake next. |
-| Only some of the client is tested | The suite arrived with M2 and covers what it arrived for: the state the client holds before the server confirms it. The grid has no test of its own — the Workbench's page test finds rows in it on the way to the query state it is about, and asserts nothing about its columns, its sort headers or its flags — and neither has the Teams tab's shell: the cards it can show instead of the Workbench, and the wrapper that picks one, are verified by `tsc` and by reading, while the decision *which* card it is, made in `session.ts` against a stubbed gateway, is tested. The examples this row used to name — the confirm dialog, the freshness chrome and, since M3, the Tenant Overview and the erasure dialog — every one of them acquired a test during M5, each the moment it took on state of the kind this suite is for: a spelling refused before the server sees it, a breakdown that unfolds by itself while a scan runs, an invitation hidden under a Personal Licence, a dialog that will not close once destruction has been asked for. That is the intended shape ([CONTRIBUTING § Testing](../CONTRIBUTING.md#testing)) rather than an omission, and the examples migrating off this row is the rule working rather than an exception to it — but it does mean a rendering regression in the parts still on it would reach a person before it reached a test. |
-| Nothing but branch protection stops a commit skipping CI | The first live-tenant fixes, all of M2 and all of M3 went straight to `main`, so validation never ran on any of it until the first pull request after M0 — which passed, on Linux in Release against a SQL Server container, so nothing was hiding in the difference from a Windows workstation. The backlog is cleared; the practice that created it is closed only by a branch protection rule that makes the pull request compulsory, and until one is set the gate is a habit rather than a rule, and the cost of forgetting is another milestone landing unvalidated. |
-| Startup checks the connection string, not the database | An unparseable connection string fails the boot, but a well-formed one pointing at a database that is down does not: `DatabaseReadinessCheck` reports it in the log and the app serves. That is a deliberate choice, not an oversight, and reversing it should be a decision rather than an accident. |
+| No test watches the application refuse to start | `ConfigurationValidationTests` used to boot the whole app and wait for the failure, and was green about four runs in five. The cause found is in the test host, not the product: under `WebApplicationFactory` startup validation runs on the entry point's own thread, after the host has been handed back and while `RunAsync` is disposing it, so what `CreateClient` throws is decided by scheduling — demonstrated, though at one boot in 300 and with a different symptom than the one reported, which never reproduced. The test now asks the startup validator directly and is deterministic. Two things are no longer watched by anything: the host actually stopping, and a `Program`-level `PostConfigure` that quietly repaired a bad setting. Both could be covered by moving `Program`'s composition into a method a test can call and start on its own thread; that was weighed and declined, because it reshapes the file every contributor reads first in order to suit a test. That prediction was met: two licensing tests written after this row booted the app and asserted on the throw, and failed under load exactly as described. Both now ask the validator, and `TestConventionTests` fails the build on the next test that asserts a boot throws, so this row records a gap in coverage, not a warning about what will flake next. |
+| Only some of the client is tested | The suite arrived with M2 and covers what it arrived for: the state the client holds before the server confirms it. The grid has no test of its own. The Workbench's page test finds rows in it on the way to the query state it is about, and asserts nothing about its columns, its sort headers or its flags. Neither has the Teams tab's shell: the cards it can show instead of the Workbench, and the wrapper that picks one, are verified by `tsc` and by reading, while the decision *which* card it is, made in `session.ts` against a stubbed gateway, is tested. The confirm dialog, the freshness chrome, the Tenant Overview and the erasure dialog each acquired a test during M5, at the moment it took on state of the kind this suite is for: a spelling refused before the server sees it, a breakdown that unfolds by itself while a scan runs, an invitation hidden under a Personal Licence, a dialog that will not close once destruction has been asked for. That is the intended shape ([CONTRIBUTING § Testing](../CONTRIBUTING.md#testing)): a client change gets a test when it touches that held state. It does mean a rendering regression in the untested parts would reach a person before it reached a test. |
+| Nothing but branch protection stops a commit skipping CI | A ruleset on `main` makes the pull request compulsory and requires the `build-and-test` and `cla` checks. Repository administrators can bypass it and push to `main` directly; CI then runs on the commit after it has landed, not before. That bypass is the one way left for a commit to reach `main` unvalidated. Before the rule existed, the first live-tenant fixes, all of M2 and all of M3 went straight to `main`, so validation never ran on any of it until the first pull request after M0. That run passed, on Linux in Release against a SQL Server container, so nothing was hiding in the difference from a Windows workstation. |
+| Startup checks the connection string, not the database | An unparseable connection string fails the boot, but a well-formed one pointing at a database that is down does not: `DatabaseReadinessCheck` reports it in the log and the app serves. That is deliberate, and reversing it should be a decision too, not an accident. |
 | The first scan after upgrading past the id-collation migration re-reads everything | The collation migration (`GraphIdBinaryCollation`) clears every delta link on purpose: rows a case collision swallowed were never written, and no incremental pass would ever mention them again. Expect one full pass per list, and freshness to read as unknown until it finishes. |
 | Erasure is not exclusive with a scan or a Change | Those two exclude each other inside their own claims; erasure joins neither scheme. A scan running at the moment somebody erases themselves is stopped by the disappearance of the row it claimed — the runner renews its lease after every page and gives up when the row is gone — and the purge repeats itself while it keeps finding rows, so the page written in between is caught on the second pass. What is left is a window of milliseconds in which a page could land after the last pass. Closing it properly means a third participant in both claims' conditions, which was not worth adding for a residue the repeat already sweeps. |
 | The statistics begin the day the migration is applied | Nothing recorded a sign-in before M3, so there is nothing to reconstruct the earlier ones from. On a real tenant already using TodoWerk before then, that means the first sign-in date is the upgrade date rather than the truth, and every count starts from zero. Deliberate: a backfill would have to invent the moments it was inventing the rows for. |
@@ -534,12 +528,12 @@ Smaller than those four, and written down so that none of it has to be rediscove
 | A guest's token-cache entry survives their erasure | The purge evicts by the directory identifiers (`oid.tid`); MSAL keys entries by the home ones (`uid.utid`), and for a guest the two differ. What survives is unusable — `GraphGateway` rebuilds the same directory-claims principal and misses the entry too — and lapses within the 90-day sliding expiry, but "their token cache entry is evicted" is false for guests. The same caveat the gateway already carries: guests are unsupported until tried against a real tenant, and fixing this properly means storing home identifiers, which [ADR-0009](adr/0009-what-todowerk-stores-about-a-person.md) forbids. |
 | A person who is erased and later returns is counted twice | Inherent to anonymisation rather than an oversight: recognising the returner would take the identifier erasure removes ([ADR-0009](adr/0009-what-todowerk-stores-about-a-person.md)). The cumulative count records arrivals, not distinct persons. The floor and the average are unaffected — both are computed over the rows that still name somebody. |
 | The dormancy sweep is its own worker, not a job on an existing one | The sweep was specified "on the existing worker cadence". The existing workers live inside the Indexing and Changes modules and cannot reach Onboarding's eraser without the cross-module dependency the boundary tests forbid, so the sweep got a worker of its own on an hourly tick — a year-long deadline needs no three-second poll. Deliberate, and recorded here because the specification said otherwise. |
-| An erasure that could not finish shows the reader problem-JSON | The erasure control is a form POST, because its success answer is a redirect to the identity provider's end-session endpoint and only a browser navigation follows one. So its failure answer is a problem-details document rendered as text in the tab — the same shape sign-out has always had on its own failure path. The `detail` is a sentence written for a person ("something was still working on your data — try again in a moment"), so it reads rather than merely appears, but it is a JSON page after a sensitive click. Fixing it properly means the SPA driving erasure and handling the sign-out redirect itself. |
-| The Teams tab's bootstrap is reachable by no test | `app.initialize()`, `getAuthToken()` and the on-behalf-of round trip run in one module that imports TeamsJS, and the client suite tests the state the client holds rather than what it renders ([CONTRIBUTING § Testing](../CONTRIBUTING.md#testing)). What *is* tested is the decision the bootstrap makes given three responses — sign in, offer consent, blame the cookie — which is the part that has branches. What is not is the handshake itself, and reshaping the code so a test could reach it would buy a mock of Microsoft's client rather than evidence about it. The Teams tab's walk closed it by other means: the handshake was exercised by Teams desktop, Teams web and Teams mobile, and it worked on all three. The gap is therefore about the *test suite* rather than about the code — no test guards the handshake against a regression, and the next one will be found by a person rather than by CI. |
-| Teams on the web in Safari is expected not to hold a session, and the mitigation has never run | Safari blocks unpartitioned third-party cookies outright, and inside the Teams frame that is what `todowerk.session` is ([ADR-0010](adr/0010-teams-tab-session-and-framing.md)). The tab detects the exact signature — a successful exchange followed by a 401 — offers the browser instead of failing silently, and the server logs the same condition as itself rather than as one more anonymous 401. Closing it properly would mean the bearer-token design ADR-0010 declined, and buying the Safari case with two ways of knowing who is calling on every endpoint forever was the trade it refused. The walk answered the mobile half and could not answer the Safari half. Teams on a real Android device held the session perfectly and no card fired, so the mitigation is not needed there. Safari itself has **not been verified on macOS or iOS**, so every sentence in this row about Safari's behaviour, and every line of the card built for it, remains a prediction that has never run in the browser it exists for. A hosted browser session would settle it in one sitting; the log line carries the user agent so that whoever does it can confirm the signature, and is diagnostic evidence rather than proof: the header that produces it is asserted by the client, grants nothing, and is capped at sixty diagnostics a minute with the ceiling reporting itself. |
+| An erasure that could not finish shows the reader problem-JSON | The erasure control is a form POST, because its success answer is a redirect to the identity provider's end-session endpoint and only a browser navigation follows one. So its failure answer is a problem-details document rendered as text in the tab — the same shape sign-out has always had on its own failure path. The `detail` is a sentence written for a person ("something was still working on your data — try again in a moment"), so it reads rather than merely appears, but it is a JSON page after a sensitive action. Fixing it properly means the SPA driving erasure and handling the sign-out redirect itself. |
+| The Teams tab's bootstrap is reachable by no test | `app.initialize()`, `getAuthToken()` and the on-behalf-of round trip run in one module that imports TeamsJS, and the client suite tests the state the client holds rather than what it renders ([CONTRIBUTING § Testing](../CONTRIBUTING.md#testing)). What *is* tested is the decision the bootstrap makes given three responses — sign in, offer consent, blame the cookie — which is the part that has branches. What is not is the handshake itself, and reshaping the code so a test could reach it would buy a mock of Microsoft's client rather than evidence about it. The Teams tab's walk closed it by other means: the handshake was exercised by Teams desktop, Teams web and Teams mobile, and it worked on all three. The gap is therefore in the *test suite*, not in the code: no test guards the handshake against a regression, and the next one will be found by a person, not by CI. |
+| Teams on the web in Safari is expected not to hold a session, and the mitigation has never run | Safari blocks unpartitioned third-party cookies outright, and inside the Teams frame that is what `todowerk.session` is ([ADR-0010](adr/0010-teams-tab-session-and-framing.md)). The tab detects the exact signature — a successful exchange followed by a 401 — offers the browser instead of failing silently, and the server logs the same condition as itself rather than as one more anonymous 401. Closing it properly would mean the bearer-token design ADR-0010 declined: it would buy the Safari case with two ways of knowing who is calling, on every endpoint, permanently. The walk answered the mobile half and could not answer the Safari half. Teams on a real Android device held the session perfectly and no card fired, so the mitigation is not needed there. Safari itself has **not been verified on macOS or iOS**, so every sentence in this row about Safari's behaviour, and every line of the card built for it, remains a prediction that has never run in the browser it exists for. A hosted browser session would settle it in one sitting; the log line carries the user agent so that whoever does it can confirm the signature, and is diagnostic evidence rather than proof: the header that produces it is asserted by the client, grants nothing, and is capped at sixty diagnostics a minute with the ceiling reporting itself. |
 | The first run of a tenant that has not granted Tenant Consent has never been seen | The tab's answer to a failed on-behalf-of exchange — the explanatory card, its button, and the popup that runs the existing server-side OIDC flow — is the expected first run of every new tenant, and the walk could not reach it: no second tenant was available. The decision logic *is* tested (`session.test.ts` pins which of the five outcomes each response produces) and the popup path is the same one erasure and reconnect use, both of which were walked. What has never happened is the whole sequence, in a real tenant, for the person who arrives first. A free Microsoft 365 developer tenant would close it. The browser's half of the same first run *has* now been walked, and walking the decline path found that the sign-in callback answered HTTP 500 with a problem-details document, because nothing handled a remote failure. That is fixed — the callback never throws now, and `SignInFailureTests` pins where each way of failing lands. |
 | The `glass` theme is untestable here | Teams reports it on Apple Vision Pro, which nothing in this project can be tested against. It falls back to the light Teams theme rather than throwing, and a test pins the fallback — but "falls back gracefully" is a claim about code rather than an observation, and it stays one. |
-| A Teams sign-in's tokens live in a different partition of the cache from a browser sign-in's | Not a gap so much as a shape worth knowing before somebody simplifies it away. MSAL files an authorization-code result under the home account id and an on-behalf-of result under a hash of the assertion, which nothing outside that one request holds — so the tab's tokens are filed under a session key TodoWerk chooses instead (`TeamsSsoDefaults.SessionKeyFor`), and the Graph gateway looks in the account partition first and that one second. The cost is one thrown-and-caught exception on the first Graph call of every request made by somebody who signed in through Teams. Removing either half breaks one of the two sign-ins, and only the tests added with it would say so. |
+| A Teams sign-in's tokens live in a different partition of the cache from a browser sign-in's | This is a design to keep, recorded so that nobody simplifies it away. MSAL files an authorization-code result under the home account id and an on-behalf-of result under a hash of the assertion, which nothing outside that one request holds — so the tab's tokens are filed under a session key TodoWerk chooses instead (`TeamsSsoDefaults.SessionKeyFor`), and the Graph gateway looks in the account partition first and that one second. The cost is one thrown-and-caught exception on the first Graph call of every request made by somebody who signed in through Teams. Removing either half breaks one of the two sign-ins, and only the tests added with it would say so. |
 | `validDomains` names TodoWerk's host and not the identity provider | The original plan listed both. Microsoft's schema says not to list the domains of identity providers, and the Teams Store validation guidelines name `*.microsoftonline.com` as a domain that is not allowed at all — a must-fix finding. The plan's own reasoning argues the same way: the popup starts and ends on TodoWerk's domain with the round trip in the middle, which is exactly why the middle needs no entry. Deliberate, and recorded here because the plan said otherwise. |
 | The Guide — the Handbook's half for the person using the product — is not part of this repository | The application's half of the Handbook is built: `/about` is what the manifest's `websiteUrl` now names, so the Teams admin center's support link no longer lands on a sign-in page, and `/administrators` is what `publisherDocsUrl` names. The Guide is published separately and is not part of this repository ([ADR-0013](adr/0013-the-handbook-is-split-by-kinship.md)). A deployment that leaves `Handbook:GuideUrl` unset carries no Guide entry in the header's help menu, and its About Page's "Read more" lists the page for administrators alone. The screenshot seeder (`scripts/Seed-HandbookScreenshots.ps1`) is here; the pictures are not. M7 adds to what the Guide has to say: five Changes rather than three, and five promises about Marker Rules — rules never write on their own, applying adds and reorders but never removes, a stale marker stays until you remove it yourself, removing takes only emoji TodoWerk put there and never one you typed, and a rename carries the rule. It promises nothing about how To Do sorts or searches a title that starts with an emoji, because nothing here knows. |
 | Licensing has been walked against a local licensing service only | TodoWerk's resolver, portal client and seat reporter have been walked over the network against a licensing service built from source and run locally, not against a deployed one. |
@@ -563,13 +557,12 @@ demonstrate, not a layer you cannot see.
 | M3 — Tenant Consent & Tenant Overview | Delegated admin consent, tenant statistics, retention and erasure | Complete — closed 2026-08-12; verified against a real tenant 2026-08-25, which found and fixed a decline recorded as an approval |
 | M4 — Teams tab | Teams SSO, app package | Complete — built 2026-08-26, closed 2026-09-01; walked against a real tenant on Teams desktop, Teams web and a real Android device, with a Change run and undone against a real mailbox through the tab. Fourteen cells passed and the one defect reported was dismissed the same day as not a defect — the first walk in this project to find nothing real. The App Package passes the Teams Store validation tool with zero errors and zero warnings, on a build carrying the settled developer name. Two cells could not be walked and are recorded above as gaps rather than passes: Safari, and the first user of an un-consented tenant |
 | M5 — Licensing & polish | Licence resolution over the First-Party Path, Licence Banner, Tenant Overview Licence panel, browser dark mode | Complete — shaped 2026-09-02 ([ADR-0012](adr/0012-three-kinds-of-licence-resolved-per-person.md)) and built 2026-09-03 against the licensing service's documented contract. Walked against a licensing service built from source and run locally — six cells observed, one finding, fixed. The notification email is dropped: it was designed for the Org Mode ADR-0008 retired, and would have needed an address on disk that ADR-0009 forbids. The tips card is deferred with no plan attached |
-| M6 — Self-Host & listing | Compose packaging, setup docs, marketplace listing | Planned — the application's half of the Handbook landed 2026-09-03 ([ADR-0013](adr/0013-the-handbook-is-split-by-kinship.md)); the Guide is published separately; the Microsoft Store listing is prepared outside this repository |
+| M6 — Self-Host & listing | Compose packaging, setup docs, marketplace listing | Partly done — the first release (1.0.2) shipped: the Microsoft Store listing is published and this repository is public. The application's half of the Handbook landed 2026-09-03 ([ADR-0013](adr/0013-the-handbook-is-split-by-kinship.md)), the Guide is published separately, and setup docs exist as [runbooks/deploying-a-self-host.md](runbooks/deploying-a-self-host.md). Compose packaging is not done |
 
-Self-hosting becomes practical at M6, when there is something to package and support.
-Until then the supported way to run TodoWerk is from source, as described in the
-[README](../README.md). Running the CI container on a server of your own is possible and is
-written down in [runbooks/deploying-a-self-host.md](runbooks/deploying-a-self-host.md), but it is
-a build artefact being deployed rather than a release, and nothing about it is a promise yet.
+Self-hosting is available as is. You can run TodoWerk from source, as described in the
+[README](../README.md), or run the CI container on a server of your own, as written down in
+[runbooks/deploying-a-self-host.md](runbooks/deploying-a-self-host.md). Neither carries a support
+commitment yet, and until Compose packaging exists a deployment needs its own compose file.
 
 ## Decisions already settled
 
@@ -619,5 +612,5 @@ before a line of it existed.
   repository. The Administrator's Guide is a second telling of what
   the ADRs decide, and reads its numbers from the running configuration.
 
-New decisions are written up as they are made, and pull requests that contradict one
-should expect to argue with it rather than around it.
+New decisions are written up as they are made. A pull request that contradicts one should
+make its case against that decision openly, not work around it.

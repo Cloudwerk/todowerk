@@ -76,14 +76,14 @@ signs in and never by anything running in the background.
 | The person's task titles, one row per task, and the hashtags extracted from them | Until the person is forgotten, below. Kept current in the background while the person is using TodoWerk, as the paragraph below defines it. A task deleted in To Do leaves the index at the next sync |
 | Which lists were read, and how far each read got | The same |
 | Each confirmed change, its per-task plan, and its journal. The journal holds the title read immediately before every write and the title written | Kept for {{ChangeRetentionDays}} days after the change finished. The journal is what makes a change undoable, and undo is offered for the same {{ChangeRetentionDays}} days |
-| Each marker rule the person created: an emoji, the hashtag it is about, and its place in their list | Until the person is forgotten, below. A rule is something they wrote down rather than something TodoWerk observed, and nothing deletes it on its own. A rule the person deletes is kept and marked deleted rather than removed. Its emoji is still at the front of the tasks it was applied to, and TodoWerk has to go on recognising it there. Such a row is shown to the person under their own markers. It is destroyed once they remove that emoji from the tasks carrying it. Being forgotten destroys those either way |
+| Each marker rule the person created: an emoji, the hashtag it is about, and its place in their list | Until the person is forgotten, below. A rule is something they wrote down, not something TodoWerk observed, and nothing deletes it on its own. A rule the person deletes is kept and marked deleted. Its emoji is still at the front of the tasks it was applied to, and TodoWerk has to go on recognising it there. Such a row is shown to the person under their own markers. It is destroyed once they remove that emoji from the tasks carrying it. Being forgotten destroys those either way |
 | The person's Microsoft Graph refresh token, encrypted at rest | 90 days after it was last used, or until the person signs out or is forgotten |
 
 The copy is kept current on a timer only for people who signed in within the last {{IdleAfterDays}}
 days. After that TodoWerk stops reading the person's tasks on its own, and nothing of theirs is
 refreshed until they next sign in, which starts it again within seconds. The copy itself stays until
 the person is forgotten. A hashtag manager has no reason to keep reading the tasks of somebody who is
-not using it, and this is where that stops.
+not using it.
 
 Task titles are the sensitive part. A title is whatever the person wrote in it, and TodoWerk holds a
 copy in order to count hashtags. Every Graph token stays on the server. The browser holds a session
@@ -105,7 +105,7 @@ While fewer than {{StatisticsFloor}} people are on record, the statistics are no
 a tenant that small, a total plus one reader's own knowledge is an inference about identifiable
 colleagues. People who have been forgotten do not count toward that {{StatisticsFloor}}. The floor is
 measured on every request. A tenant that had the statistics loses them again if enough people are
-forgotten, which is the floor keeping its promise.
+forgotten.
 
 The invitation to approve TodoWerk for the organisation is subject to no floor and appears until an
 approval is recorded. Otherwise it could not be found in the tenants that most need it.
@@ -156,8 +156,9 @@ Then approve it once for the organisation, as above. It works without that. The 
 every person meets a consent prompt the first time they open it.
 
 One limitation to know before rolling out: **Teams on the web in Safari** is expected not to hold a
-TodoWerk session inside the Teams frame, because Safari refuses the cookie that session is. The tab
-is built to detect that and offer to open TodoWerk in a browser tab instead, where everything works.
+TodoWerk session inside the Teams frame, because Safari refuses the cookie that holds the session.
+The tab is built to detect that and offer to open TodoWerk in a browser tab instead, where everything
+works.
 Teams desktop, Teams on Android, and Teams on the web in Edge or Chrome are unaffected.
 
 ## Licences
@@ -166,10 +167,11 @@ The Hosted Service has to know whether the person in front of it is licensed. A 
 three kinds. One is bought for a whole organisation and covers everybody in it, with no cap on how
 many. One is bought by a person for themselves. The third is a personal licence at no charge, valid
 for one year, issued to a person automatically, once and never again, the first time they arrive
-with no licence of any kind. Whether somebody is licensed is decided per person. A person with no licence meets a
-closed door while their colleagues carry on. The invitation to approve TodoWerk for the organisation
-is shown under an organisation-wide licence and during a trial, and never to somebody holding a
-personal one. Paying for one seat is not standing to approve a product for an organisation.
+with no licence of any kind. Whether somebody is licensed is decided per person. A person with no
+licence cannot use TodoWerk, and their colleagues are not affected. The invitation to approve
+TodoWerk for the organisation is shown under an organisation-wide licence and during a trial, and
+never to somebody holding a personal one. Paying for one seat is not standing to approve a product
+for an organisation.
 
 To answer that question the Hosted Service sends CloudWerk's own licensing portal the organisation's
 tenant id and the person's object id. It asks when the person is using TodoWerk and when their copy

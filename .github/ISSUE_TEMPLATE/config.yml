@@ -2,10 +2,10 @@ blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
     url: https://github.com/Cloudwerk/todowerk/security/advisories/new
-    about: Report privately. Never open a public issue for a vulnerability.
+    about: Email security@cloudwerk.com. Never open a public issue for a vulnerability.
   - name: Question or idea
     url: https://github.com/Cloudwerk/todowerk/discussions
     about: For anything that is not yet a bug report or a concrete proposal.
   - name: What works today, and what does not
     url: https://github.com/Cloudwerk/todowerk/blob/main/docs/status.md
-    about: TodoWerk is early and has no release. Check here first, roadmap included.
+    about: Check here first. It lists what works today and the roadmap.

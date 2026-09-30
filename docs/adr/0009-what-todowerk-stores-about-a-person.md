@@ -32,8 +32,8 @@ it with, and being forgotten neither removes it nor needs to. It exists because 
 mitigation leaves open is *which* clients refuse the cookie, and a card on somebody's screen in
 another country cannot answer it.
 
-The reason it needs saying at all is that "no user agent" was written without a qualifier, and a
-reader would fairly take it as covering everything rather than the record. It covers the record.
+It is recorded because "no user agent" was written without a qualifier, and a reader would fairly
+take it to cover everything, not only the record. It covers the record.
 [PRIVACY.md](../../PRIVACY.md) now has a section of its own for what reaches a server log, because
 that is the document somebody actually reads.
 
@@ -68,8 +68,8 @@ query the directory.
 
 Anonymising in place satisfies both. What is left is a row saying "somebody in this tenant started
 using TodoWerk on this date", which is a fact about the tenant and about nobody in particular. The
-statistical purpose is met without retaining an identifier, and that is the whole reason the
-statistic is genuinely anonymous rather than merely pseudonymous.
+statistical purpose is met without retaining an identifier, and that is why the statistic is
+anonymous and not merely pseudonymous.
 
 The last moment goes with the object id, deliberately. It is what the activity windows are computed
 from, so an erased person counts once toward the total and never as present. Somebody who left is not
@@ -109,7 +109,7 @@ rule and no erasure route between them, so part of this decision is repair rathe
 Each module purges its own rows behind a port declared in the shared application layer, and erasure
 orchestrates them. Onboarding names no Indexing or Changes type, which is what keeps the module
 boundary tests honest without a new documented exception — the two that exist are deliberate and
-commented, not a licence for more.
+commented, not a precedent for more.
 
 ## Amendment (M7): a Marker Rule is the first thing a person chooses rather than leaves behind
 
@@ -145,16 +145,16 @@ rather than accidental.
 A person who is erased and later returns is a new row. Recognising them would require comparing
 their identifier against one the anonymisation removed, so the cumulative count records arrivals
 rather than distinct persons: somebody who exercises erasure yearly and keeps coming back counts
-once per cycle. The alternative — keeping a hash of the identifier to deduplicate against — is a
-pseudonym wearing a disguise, and pseudonymous is not anonymous.
+once per cycle. The alternative, keeping a hash of the identifier to deduplicate against, is still
+a pseudonym, and pseudonymous is not anonymous.
 
 And the suppression floor cannot be measured against the cumulative count, precisely because that
 count keeps the forgotten. The people the statistics describe are the ones who still hold
 Occurrences and activity — the identifiable rows — so the floor gates on those. In a tenant of six
 where five have been forgotten, the cumulative count passes any sensible floor while every figure
-on the screen is about one identifiable colleague; gating on identifiable rows is what keeps the
-floor's promise after erasure has been exercised, and the average per person divides by the same
-number for the same reason.
+on the screen is about one identifiable colleague. Gating on identifiable rows keeps the floor's
+promise after erasure has been exercised, and the average per person divides by the same number for
+the same reason.
 
 ## Considered options
 
@@ -166,8 +166,7 @@ number for the same reason.
 - **Keep the object id and mark the row as erased** — rejected: pseudonymous is not anonymous, and a
   row that names somebody who asked to be forgotten is the thing being asked about.
 - **Keep the last-signed-in moment on an anonymised row** — rejected: it would count somebody who has
-  left among the people active this month, and the honest reading of an erased person is that they are
-  not here.
+  left among the people active this month, and an erased person counts as not here.
 - **Retain forever and offer erasure on request only** — rejected: it makes the exit depend on
   knowing there is one, and leaves an abandoned account's task titles in the database indefinitely.
 - **A separate organisation-wide delete for administrators** — rejected as unnecessary and as a

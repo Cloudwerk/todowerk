@@ -6,15 +6,14 @@ It is one of the three renderings of the TodoWerk mark, in the CloudWerk house s
 measurements.
 
 This is the **app's** logo, not the publisher's. It appears beside the app name on the Microsoft
-consent dialog, on the Enterprise applications page and in My Apps — while the *publisher* is named
-separately on that same dialog, with the verified badge that Microsoft Entra ID publisher
-verification adds. So it carries the
-TodoWerk mark rather than the CloudWerk one, and matches the Teams package's icon so that the tab and
-the consent dialog read as one product.
+consent dialog, on the Enterprise applications page and in My Apps. The *publisher* is named
+separately on the same dialog, with the verified badge that Microsoft Entra ID publisher
+verification adds. So the logo carries the TodoWerk mark, not the CloudWerk one, and matches the
+Teams package's icon so that the tab and the consent dialog read as one product.
 
-Full-bleed rather than transparent, deliberately: the consent dialog paints it on white, where a
+It is full-bleed, not transparent, because the consent dialog paints it on white, where a
 transparent tile would leave a white glyph on white.
 
 A Self-Host registers its own Entra ID application
 ([teams-app-registration.md](../../docs/runbooks/teams-app-registration.md)) and can upload this same
-file, or its own — nothing about the logo is deployment-specific.
+file or its own. Nothing about the logo is deployment-specific.

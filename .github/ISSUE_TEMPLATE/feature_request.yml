@@ -6,10 +6,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Before writing:
-        [docs/status.md](https://github.com/Cloudwerk/todowerk/blob/main/docs/status.md)
-        already covers the hashtag inventory, rename and merge, Marker Rules, background
-        jobs, Tenant Consent, the Teams tab, and licensing, and its roadmap names what is
+        Check [docs/status.md](https://github.com/Cloudwerk/todowerk/blob/main/docs/status.md)
+        first. It covers the hashtag inventory, rename and merge, Marker Rules, background
+        jobs, Tenant Consent, the Teams tab and licensing, and its roadmap names what is
         planned. If your idea touches one of those, say what it adds to what is there.
 
         [docs/adr/](https://github.com/Cloudwerk/todowerk/tree/main/docs/adr) records
@@ -21,9 +20,8 @@ body:
     attributes:
       label: The problem
       description: |
-        What are you unable to do today? Describe the situation, not the solution —
-        the best proposals here have come from someone's actual tagging workflow
-        falling over.
+        What are you unable to do today? Describe the situation, not the solution.
+        An example from your own tagging workflow helps most.
     validations:
       required: true
 

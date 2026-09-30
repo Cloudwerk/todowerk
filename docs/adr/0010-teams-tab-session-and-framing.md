@@ -18,7 +18,7 @@ The tab could send its SSO token on every request and let the server exchange it
 the shape most Teams samples take, and it has one genuine advantage this ADR gives up: there is no
 cookie in the frame at all, so `SameSite` never arises, cross-site request forgery is structurally
 impossible on those calls, and Safari's refusal to carry unpartitioned third-party cookies never
-bites.
+applies.
 
 It was rejected because it makes TodoWerk an application with two ways of knowing who is calling.
 Every endpoint would accept either, every future endpoint would have to remember to, and the
@@ -68,7 +68,7 @@ the list does or not.)*
 ## Consequences
 
 - Three cookies change, in three files: `todowerk.session`, `todowerk.antiforgery`, and the
-  JS-readable `XSRF-TOKEN`. The latter two are `Strict` today and would simply be absent in the frame.
+  JS-readable `XSRF-TOKEN`. The latter two were `Strict` and would simply have been absent in the frame.
 - Cross-site request forgery protection now rests entirely on the double-submit pair rather than on
   `SameSite` as well. It still holds — `SameSite=None` lets an attacker's page *send* the cookie, never
   *read* it — but the antiforgery token has stopped being defence in depth and become the defence.

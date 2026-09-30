@@ -14,7 +14,7 @@ edited in months.
 
 ### Fix them
 
-Three changes, and no others:
+Three changes to a hashtag, and no others:
 
 - Rename a hashtag.
 - Normalise one written several ways onto a single spelling.
@@ -60,8 +60,8 @@ in English.
 - **Something is not working**: you cannot sign in, or something that used to work has stopped.
   Contact {{OperatorContact}}.
 - **A defect in the software, or an idea for it**: the
-  [issue tracker](https://github.com/Cloudwerk/todowerk/issues). TodoWerk is developed in the open,
-  and an issue filed there is read by the people who build it.
+  [issue tracker](https://github.com/Cloudwerk/todowerk/issues). TodoWerk is developed in a public
+  repository, and an issue filed there is read by the people who build it.
 - **A security vulnerability**: never the issue tracker. The
   [security policy](../SECURITY.md) says where to report one privately.
 

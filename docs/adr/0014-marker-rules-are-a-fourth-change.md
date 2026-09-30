@@ -79,10 +79,9 @@ before it and writes a **second block in front of the first** — `☕ 🍞☕ F
 twice, stable across every later run. So a deleted rule is kept and marked deleted rather than
 removed: listed nowhere, applied nowhere, in no Apply's scope and never swapped, and present
 only so the emoji goes on being read as part of the block it is in. (Listed nowhere until the
-Remove Markers amendment below, which shows the person the emoji such a row holds — because a row
-nobody can see is one nobody can be rid of.) Both uniqueness rules become
-rules about the rules that stand, so a deleted rule neither holds its Hashtag nor its emoji
-against a new one.
+Remove Markers amendment below, which shows the person the emoji such a row holds, because a row
+nobody can see is one nobody can be rid of.) Both uniqueness rules become rules about the rules
+that stand, so a deleted rule neither holds its Hashtag nor its emoji against a new one.
 
 The same reasoning covers a Marker a rule stops remembering — the retired one, once an Apply has
 swapped it everywhere the plan reached. Tasks that lost the Hashtag before the plan was drawn
@@ -102,15 +101,15 @@ still here. **Remove Markers** is that direction.
 
 ### Stale is one thing, and the third candidate is unreachable
 
-A Marker in a task's block is **stale** when no standing rule asks for it on that task — where a
-rule asks for its own Marker on a task carrying its Hashtag, and also for the Marker it retired
-while that Hashtag is there, because the next Apply swaps that one and a Remove that took it would
-clear a task about to be marked properly. One sentence covers all three things this amendment is
+A Marker in a task's block is **stale** when no standing rule asks for it on that task. A rule asks
+for its own Marker on a task carrying its Hashtag. It also asks for the Marker it retired while that
+Hashtag is there, because the next Apply swaps that one, and a Remove that took it would clear a
+task about to be marked properly. One sentence covers all three things this amendment is
 about: an emoji whose Hashtag has gone, one whose rule was deleted, and a retired Marker that
 `MarkerPlan` could not attribute to a single rule and therefore left where it was.
 
-The candidate that reads as the safest — "an emoji no rule of theirs has ever mentioned" — is the
-one this operation is structurally unable to act on, and that is the point. `MarkerBlock.Read`
+The candidate that reads as the safest, "an emoji no rule of theirs has ever mentioned", is the one
+this operation is structurally unable to act on, by design. `MarkerBlock.Read`
 defines a block only against that person's own Markers, so an emoji nobody made a rule about is not
 in a block at all: it is the first character of the rest of the title, deliberately, so that an
 Apply cannot pick up somebody's decorative sparkle and start reordering it. A Remove reads the same
@@ -165,10 +164,10 @@ larger by exactly the stale population it exists to measure.
 A completed Remove drops the rows that were keeping its Markers known, under the test
 `RecordWrittenMarkersAsync` already uses: every planned task whose block held the Marker was
 reached. A cancelled or failed run drops nothing. And because undo is offered for thirty days, the
-undo of a Remove writes those rows back for every Marker it restored — without that, an undone
+undo of a Remove writes those rows back for every Marker it restored. Without that, an undone
 Remove would leave an emoji in real titles that the block reader no longer recognises, and the next
-Apply would write a second block in front of the first, which is the artefact the kept rows exist
-to prevent.
+Apply would write a second block in front of the first: the artefact the kept rows exist to
+prevent.
 
 ## Considered options
 
@@ -187,8 +186,8 @@ to prevent.
 - `CONTEXT.md` gains **Marker**, **Marker Rule** and **Apply Markers**, and **Change** is widened to
   two shapes. The Guide describes four Changes — five, after the Remove Markers amendment — and
   promises: rules never write on their own, applying adds and reorders but never removes, a stale
-  Marker stays until removed on purpose, and a Rename carries the rule. It promises nothing about how To Do sorts or searches a title that starts
-  with an emoji.
+  Marker stays until removed on purpose, and a Rename carries the rule. It promises nothing about
+  how To Do sorts or searches a title that starts with an emoji.
 - Completed tasks are applied to like any other, as Rename and Merge already do; the index does not
   know completion state and this ADR does not widen it. Recorded in status.md.
 - A title the block would push past 255 characters is skipped and named in the preview, the same
