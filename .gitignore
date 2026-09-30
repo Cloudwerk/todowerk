@@ -1,0 +1,36 @@
+# --- Local tooling state and private notes, never committed ---
+.remember/
+.claude/
+.scratch/
+CLAUDE.md
+docs/research/
+docs/agents/
+
+# --- Deployment configuration and secrets, never committed ---
+.env
+.env.*
+*.local.json
+
+# --- Build output ---
+bin/
+obj/
+TestResults/
+*.user
+
+# --- Client build output ---
+node_modules/
+src/TodoWerk.Web/wwwroot/
+src/TodoWerk.Web/ClientApp/dist/
+*.tsbuildinfo
+
+# --- Built Teams App Packages ---
+# Built packages name one deployment; only the template is versioned (ADR-0011). The source
+# manifest and the build script are here; the built zips are not.
+artifacts/
+
+# --- OS / editor noise ---
+Thumbs.db
+.DS_Store
+src/TodoWerk.Web/appsettings.Development.json
+/.vs
+.playwright-mcp/*

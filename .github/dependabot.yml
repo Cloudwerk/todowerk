@@ -1,0 +1,63 @@
+version: 2
+
+updates:
+  # NuGet versions are managed centrally in Directory.Packages.props; Dependabot
+  # understands Central Package Management and edits that file.
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      # Ordered narrowest first — Dependabot assigns a package to the first group
+      # whose patterns match, so the test group has to precede "Microsoft.*".
+      test:
+        patterns:
+          - "xunit*"
+          - "Microsoft.NET.Test.Sdk"
+          - "Microsoft.AspNetCore.Mvc.Testing"
+          - "NetArchTest.*"
+      microsoft:
+        patterns:
+          - "Microsoft.*"
+
+  # The SPA lives under the web project, not at the repository root.
+  - package-ecosystem: npm
+    directory: /src/TodoWerk.Web/ClientApp
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      fluentui:
+        patterns:
+          - "@fluentui/*"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "react-router"
+          - "@types/react"
+          - "@types/react-dom"
+      build-tooling:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+          - "typescript"
+          - "@types/node"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: ci
+      include: scope

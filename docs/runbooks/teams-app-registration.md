@@ -1,0 +1,220 @@
+# Making an app registration a Teams app
+
+Everything the Teams tab needs from Microsoft Entra ID, and nothing that is code. The tab reuses
+the app registration TodoWerk already has — the same client id, the same client secret, the same
+`Tasks.ReadWrite` permission and no other. What it gains is an identity a Teams client can ask for
+a token for, and the Teams clients pre-authorized to ask.
+
+No new permission is requested here. The scope surface stays exactly `Tasks.ReadWrite` plus the
+OpenID scopes ([ADR-0007](../adr/0007-one-consent-grant.md)), and the Teams path adds no
+application permission, no directory permission and no app-only credential
+([ADR-0008](../adr/0008-tenant-consent-is-delegated.md)).
+
+**One registration, one host.** Teams single sign-on does not support several domains per app: the
+manifest's `webApplicationInfo` names one Application ID URI, that URI names one host, and the
+token a Teams client acquires is acquired for that host. A Self-Host is a different host, so it
+needs its own registration and its own App Package
+([ADR-0011](../adr/0011-two-app-packages-and-a-template.md)).
+
+Everything below is the procedure, with your own tenant, client id and host in place of the
+placeholders.
+
+## What you need
+
+- An account able to edit the app registration (Application Administrator, or an owner of it).
+- The host TodoWerk answers on, with a certificate a Teams client will accept. Teams will not load
+  a tab over plain HTTP and will not load one over a certificate it does not trust — a self-signed
+  development certificate included.
+
+## Before anything else: decide who the registration is for
+
+**Authentication → Supported account types** is the one setting here that cannot be corrected
+quietly later, and it has to agree with the deployment's `EntraId:TenantId`:
+
+| Who the deployment serves | Supported account types | `EntraId:TenantId` |
+| --- | --- | --- |
+| One tenant — the usual Self-Host | Accounts in this organizational directory only | that tenant's id |
+| More than one tenant — a multi-tenant deployment | Accounts in any organizational directory | `organizations` |
+
+Never the options that include personal Microsoft accounts. TodoWerk is B2B only
+([CONTEXT.md](../../CONTEXT.md)), and the application refuses to start with `EntraId:TenantId` set
+to `common` for exactly that reason.
+
+The two halves are checked in different places and neither reports the other, which is what makes
+getting them out of step expensive. **The authority decides, not the registration.** A registration
+set to multiple tenants, deployed with a single tenant's id, serves that tenant and refuses every
+other one with `AADSTS50020` — shown to the person signing in, logged nowhere on the operator's
+side, and invisible to everybody who administers the deployment because they are all in the tenant
+that works. §8 of [deploying-a-self-host.md](deploying-a-self-host.md) has the symptom in full and
+the one-line check that settles it.
+
+Changing this later is not free: a registration that moves from one tenant to many needs consent
+granted afresh in every tenant, and one moving the other way locks out everybody already using it.
+
+## 1. Set the Application ID URI
+
+**Entra ID → App registrations → your app → Manage → Expose an API → Application ID URI → Add**.
+
+The portal offers `api://<clientId>`. **Do not take it.** Teams requires the host-qualified form:
+
+```
+api://<host>/<clientId>
+```
+
+for example `api://todowerk.contoso.com/1a2b3c4d-....`. The host must be the exact host the tab is
+served from, with no scheme, no port unless the tab is served on one, and no trailing slash.
+
+The reason it matters is worth knowing, because the failure does not explain itself: the Teams
+client compares the origin of the framed document against the domain in this URI before it will
+hand out a token. Get it wrong and `getAuthToken()` fails with a resource-disabled or invalid-
+resource error that says nothing about domains at all.
+
+## 2. Expose `access_as_user`
+
+Still under **Expose an API**, **Add a scope**:
+
+| Field | Value |
+| --- | --- |
+| Scope name | `access_as_user` |
+| Who can consent | Admins and users |
+| Admin consent display name | Access TodoWerk as you |
+| Admin consent description | Allows Teams to sign a person in to TodoWerk as themselves. TodoWerk then reads and changes that person's own Microsoft To Do tasks with their own account, and reaches nobody else's. |
+| User consent display name | Access TodoWerk as you |
+| User consent description | Lets TodoWerk sign you in from Microsoft Teams. TodoWerk works with your own tasks, as you, and never with anybody else's. |
+| State | Enabled |
+
+Written for a human on purpose. This wording is what a person reads on a consent screen, and
+"access_as_user" is not a sentence.
+
+The scope grants nothing on its own: it is the audience the SSO token is minted for. What actually
+reaches Microsoft To Do is the on-behalf-of exchange the backend performs afterwards, against
+`Tasks.ReadWrite`.
+
+## 3. Pre-authorize the Microsoft 365 clients
+
+Still under **Expose an API**, **Add a client application**, once per id, each with
+`access_as_user` ticked:
+
+| Client id | Which client |
+| --- | --- |
+| `1fec8e78-bce4-4aaf-ab1b-5451cc387264` | Teams desktop and mobile |
+| `5e3ce6c0-2b1f-4285-8d4b-75ee78787346` | Teams web |
+| `4765445b-32c6-49b0-83e6-1d93765276ca` | Microsoft 365 app, web |
+| `0ec893e0-5785-4de6-99da-4ed124e5296c` | Microsoft 365 app, desktop |
+| `d3590ed6-52b3-4102-aeff-aad2292ab01c` | Microsoft 365 app, mobile — and Outlook desktop |
+| `bc59ab01-8403-45c6-8796-ac3ef710b3e3` | Outlook web |
+| `27922004-5251-4030-b22d-91ecd9a37ea4` | Outlook mobile |
+
+The five beyond Teams are there because a manifest at schema 1.13 or later offers a personal tab
+in Outlook and the Microsoft 365 app as well, and single sign-on in those hosts fails or prompts
+without them ([ADR-0010](../adr/0010-teams-tab-session-and-framing.md), amended 2026-09-09).
+
+Without these, every `getAuthToken()` raises a consent prompt of its own — an extra dialog on top
+of the one TodoWerk already asks for, saying something a person cannot act on. With them, a tenant
+that has granted Tenant Consent sees no prompt at all, which is the whole feature.
+
+All seven ids are Microsoft's own and are the same in every tenant.
+
+## 4. Register the redirect URIs the tab needs
+
+**Manage → Authentication → Web**, alongside the three that are already there
+([CONTRIBUTING § Development setup](../../CONTRIBUTING.md#development-setup)).
+
+The consent popup runs TodoWerk's existing OpenID Connect flow, so it comes back to the redirect
+URI that flow already uses — `https://<host>/signin-oidc` — and needs nothing new. What is new is
+where the popup is put **afterwards**, and one of those is a sign-out:
+
+| URI | Under | Why |
+| --- | --- | --- |
+| `https://<host>/teams/auth-end` | **Web** → Redirect URIs, beside the other three | Where erasure's last leg returns after Entra ID ends the session. Without it the popup is left on Microsoft's "you have signed out" page and never reports back, and Teams eventually calls the flow cancelled. |
+
+**In the Redirect URIs list, not the Front-channel logout URL box.** The two look interchangeable in
+the portal and are not: the front-channel logout URL is where Entra ID *pushes* a notification when
+a session ends somewhere else, and it does not authorize anything. What erasure needs authorized is
+a `post_logout_redirect_uri`, and Microsoft's documentation is explicit that the value "must match
+one of the redirect URIs registered for your application"
+([OpenID Connect on the Microsoft identity platform](https://learn.microsoft.com/entra/identity-platform/v2-protocols-oidc#send-a-sign-out-request)).
+Put it in the wrong box and nothing complains until somebody erases themselves from inside a tab.
+
+No new *type* of redirect URI is registered. There is no SPA platform, no implicit grant, and no
+public client: the tab holds no token of any kind, so nothing in the browser ever redeems anything
+([ADR-0002](../adr/0002-backend-held-tokens.md), [ADR-0010](../adr/0010-teams-tab-session-and-framing.md)).
+
+## 5. Tell TodoWerk its own Application ID URI
+
+The backend has to accept tokens minted for it, and it cannot guess the host-qualified form:
+
+```bash
+cd src/TodoWerk.Web
+dotnet user-secrets set "EntraId:ApplicationIdUri" "api://<host>/<clientId>"
+```
+
+Outside Development it is an ordinary setting in the `EntraId` section. Leave it empty on a
+deployment with no Teams App Package and the tab's exchange endpoint simply refuses every Teams
+token — which is the right answer for a deployment that has no tab.
+
+## 6. Point the consent dialog at the terms and the privacy notice
+
+The **Terms of service** and **Privacy statement** links on the Microsoft consent dialog come from
+the app registration's **Branding & properties**, not from the Teams manifest. Everybody who signs
+in sees them, listing or not, and a verified publisher badge sitting above a dead legal link is
+worse than no badge at all.
+
+TodoWerk serves both documents itself, so they are paths on the same host the tab runs on:
+
+| Field | Value |
+| --- | --- |
+| **Terms of service URL** | `https://<host>/legal/terms` |
+| **Privacy statement URL** | `https://<host>/legal/privacy` |
+
+Set the same two addresses in the Teams manifest's `developer` block — the package script does that
+from `Host`, so there is nothing to type — and in a Partner Center submission. All three have to
+name the same documents: a mismatch between the manifest and the submission is a documented cause of
+validation failure, and the listing is re-validated against these addresses long after anybody
+remembers setting them.
+
+The script fills two more addresses from `Host`, and both are served by the deployment itself.
+`developer.websiteUrl` becomes `https://<host>/about`: the Teams admin center shows it as the app's
+**support link**, and a support link that requires a sign-in is a *must fix* — which `https://<host>/`
+was. The root-level `publisherDocsUrl` becomes `https://<host>/administrators`, the page written for
+the administrator deciding whether to allow the app
+([ADR-0013](../adr/0013-the-handbook-is-split-by-kinship.md)). Neither has a counterpart on the app
+registration.
+
+The fourth field in that block is governed by the same rule and is easier to get wrong, because
+nothing in the package build reads it from anywhere. `developer.name` has to read exactly what
+Partner Center and AppSource call the publisher: "developer name must be the same in the app
+manifest and AppSource" is a *must fix* in its own right.
+
+Both pages answer anonymously and neither sells anything, which is what the Store validation
+guidelines require of them. Before pointing anything at them, set who the terms name as the
+operator — `Legal:Operator`, `Legal:OperatorContact` and `Legal:GoverningLaw`, described in
+[deploying-a-self-host.md](deploying-a-self-host.md). Unset, the terms still render and still name
+nobody, and the application says so once at startup.
+
+## 7. Check it
+
+- **Supported account types** matches what the deployment's `EntraId:TenantId` says, per the table
+  at the top. Check both, in the same sitting: neither one reports the other, and a mismatch is
+  invisible until somebody outside the operator's own tenant tries to sign in.
+- The Application ID URI reads `api://<host>/<clientId>` and the host matches the tab's host
+  exactly.
+- `access_as_user` is **Enabled** and set to **Admins and users**.
+- All seven Microsoft client ids appear under **Authorized client applications** with that scope ticked.
+- **Authentication → Web → Redirect URIs** lists `https://<host>/teams/auth-end` alongside
+  `signin-oidc`, `signout-callback-oidc` and `auth/tenant-consent/callback`. This is the one thing
+  step 4 adds, and it is the one whose absence stays invisible until erasure is tried from inside a
+  tab.
+- **Authentication → Settings** has both implicit grant boxes clear and **Allow public client
+  flows** disabled, and there is no SPA platform in the redirect list. The tab holds no token of any
+  kind; any of those three being on means something is configured for a flow TodoWerk does not run.
+- **Branding & properties** carries `https://<host>/legal/terms` and `https://<host>/legal/privacy`,
+  both of which resolve when fetched from outside with no session, and both of which name the
+  organisation actually operating the deployment.
+- **API permissions** still shows `Tasks.ReadWrite` and nothing else. If anything else appeared,
+  something other than this procedure added it. `Tasks.Read` in particular is a leftover from before
+  M1 moved to the write scope, and [ADR-0007](../adr/0007-one-consent-grant.md) rejected requesting
+  both — it makes the grant look wider than it is.
+
+Nothing here can be proved without a Teams client. It is proved by the walk:
+[teams-tab-walk.md](teams-tab-walk.md).

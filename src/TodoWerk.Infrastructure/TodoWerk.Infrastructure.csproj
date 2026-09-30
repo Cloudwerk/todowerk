@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\TodoWerk.Application\TodoWerk.Application.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <!-- Design-time only: `dotnet ef migrations add` needs it, the running app does not. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Identity.Web" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="TodoWerk.UnitTests" />
+    <!-- The scan runner is internal and has no public seam: driving it directly is how the
+         delta, resync and throttling branches are tested without waiting on a timer. -->
+    <InternalsVisibleTo Include="TodoWerk.IntegrationTests" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,228 @@
+name: Remove old artifacts and images
+
+# GitHub keeps build artifacts for 90 days, workflow runs forever, and container image
+# versions forever. None of that is much use here: nothing ships out of an artifact, a run
+# older than a few weeks gets read only to answer "when did this start failing" — which the
+# commit history answers better — and the registry accumulates one image version per push to
+# main for as long as the project exists. Sweeping all three keeps the Actions tab, the
+# Packages page and the repository's storage quota to the window anyone actually looks at.
+on:
+  # Manual trigger, so a backlog can be drained without waiting for tomorrow.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "List the image versions the sweep would delete, without deleting them."
+        required: false
+        type: boolean
+        default: true
+  schedule:
+    # Daily at 01:00 UTC.
+    - cron: "0 1 * * *"
+
+# Permissions are per job rather than shared: the artifact sweep has no business holding a
+# token that can delete published images, and the image sweep has none deleting runs.
+
+# Two sweeps at once would go after the same runs and log a pile of 404s at each other.
+# Never cancel one in progress: it deletes as it goes, and half a sweep is not a failure.
+concurrency:
+  group: remove-old-artifacts
+  cancel-in-progress: false
+
+jobs:
+  remove-old-artifacts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Deleting an artifact or a run is a write on actions. Nothing here reads the tree, so
+    # the job never checks out and needs no permission on contents.
+    permissions:
+      actions: write
+
+    steps:
+      - name: Remove old artifacts and workflow runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          # Long enough that a stale pull request picked up after a fortnight still has its
+          # checks to compare against, short enough that the tab is the current state of
+          # the repository.
+          RETENTION_DAYS: 21
+        run: |
+          set -euo pipefail
+
+          cutoff=$(date -u -d "$RETENTION_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ)
+          echo "Deleting artifacts and workflow runs created before $cutoff"
+
+          # Both loops read the id as the first field and everything after it as one label,
+          # because artifact and workflow names contain spaces.
+          echo "=== Artifacts ==="
+          gh api "repos/$REPO/actions/artifacts" --paginate \
+            --jq ".artifacts[] | select(.created_at < \"$cutoff\") | \"\(.id) \(.name), created \(.created_at)\"" \
+            | while read -r id label; do
+                echo "Deleting artifact $label (id $id)"
+                gh api --method DELETE "repos/$REPO/actions/artifacts/$id" --silent \
+                  || echo "Failed to delete artifact $id"
+              done
+
+          echo "=== Workflow runs ==="
+          # A run that is still going refuses to delete, and one stuck run should not fail
+          # the sweep — hence the `||`. The limit caps a single sweep, not the day: running
+          # daily, it eats through a backlog a few hundred runs at a time.
+          gh run list --repo "$REPO" --limit 500 \
+            --json createdAt,databaseId,name \
+            --jq ".[] | select(.createdAt < \"$cutoff\") | \"\(.databaseId) \(.name), created \(.createdAt)\"" \
+            | while read -r id label; do
+                echo "Deleting workflow run $label (id $id)"
+                gh run delete --repo "$REPO" "$id" || echo "Failed to delete run $id"
+              done
+
+          echo "Cleanup complete"
+
+  # --------------------------------------------------------------- GHCR image retention
+  #
+  # pr-validation.yml publishes `ghcr.io/cloudwerk/todowerk` on every push to main, tagged
+  # `latest` and `sha-<commit>`. Nothing else prunes it, so the registry grows by one version
+  # per merge forever. This job is the pruner, and it is written defensively because these
+  # images are not inert build output — deployments run them, so deleting a version a
+  # deployment still names breaks it at its next pull rather than immediately, which is the
+  # worst way to find out.
+  #
+  # Three rules protect against that, and all three matter:
+  #
+  #   1. KEEP_LATEST newest versions survive regardless of age. That is the rollback window,
+  #      and it is also what protects the *running* image when merges are infrequent: with no
+  #      merge for a fortnight the deployed image is still the newest version, so an age-only
+  #      rule would delete the one image a server is actually running.
+  #   2. `latest` is never deleted — it is the moving tag, pulled by name by anything that
+  #      follows main.
+  #   3. Digests referenced by a surviving image are never deleted. This one is precautionary
+  #      today: `dotnet publish /t:PublishContainer` pushes a single-platform manifest with no
+  #      children, so there is nothing for the rule to protect. It becomes load-bearing the
+  #      day `ContainerRuntimeIdentifiers` adds arm64 and the push becomes an OCI index whose
+  #      platform manifests appear in GHCR as their own UNTAGGED versions. They look like
+  #      garbage and they are not: deleting a child leaves the surviving parent pointing at a
+  #      manifest that no longer exists, and the tag stops pulling. That is the trap in every
+  #      "just delete all untagged versions" snippet, and it is cheaper to carry the rule than
+  #      to remember to add it.
+  #
+  # Known limitation: a deployment pinned to a `sha-` tag, as
+  # docs/runbooks/deploying-a-self-host.md recommends, loses that version from the registry
+  # once it is both older than KEEP_DAYS and outside the KEEP_LATEST newest. The pinned host
+  # keeps running its local copy, but cannot pull it again: move the pin forward, raise
+  # KEEP_LATEST, or add the tag to PROTECTED_TAGS.
+  remove-old-images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # `write` is the strongest value the permissions block accepts — there is no
+    # `packages: admin`. Deletion additionally needs this repository to hold the ADMIN role on
+    # the package, which it has because pr-validation.yml published it from here and it
+    # inherits the repository's access. If a DELETE ever returns 403, that inheritance was
+    # turned off in the package settings; re-enable it there rather than reaching for a PAT.
+    permissions:
+      packages: write
+
+    steps:
+      - name: Remove old container image versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          ACTOR: ${{ github.actor }}
+          # The package name as GHCR knows it: pr-validation.yml pushes
+          # ContainerRepository=cloudwerk/todowerk, which is owner `cloudwerk`, package
+          # `todowerk`. Named rather than derived, so a rename of this repository does not
+          # quietly start sweeping a package that does not exist.
+          PACKAGE: todowerk
+          # Scheduled runs delete. Manual runs default to a dry run, so the list can be
+          # eyeballed before anybody trusts this with a registry.
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+          KEEP_DAYS: "7"
+          KEEP_LATEST: "10"
+          PROTECTED_TAGS: "latest"
+        run: |
+          set -euo pipefail
+
+          CUTOFF=$(date -u -d "$KEEP_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ)
+          echo "Cutoff: $CUTOFF"
+          echo "Keeping the $KEEP_LATEST newest versions regardless of age."
+          echo "Protected tags: $PROTECTED_TAGS"
+          if [ "$DRY_RUN" = "true" ]; then
+            echo ">>> DRY RUN - nothing will be deleted."
+          fi
+          echo
+
+          DELETED=0
+          KEPT=0
+
+          echo "=== $PACKAGE ==="
+
+          # `.name` on a container version is the sha256 digest; the tags live under metadata.
+          if ! RAW=$(gh api --paginate "orgs/$OWNER/packages/container/$PACKAGE/versions" \
+                --jq '.[] | {id, digest: .name, created: .created_at, tags: (.metadata.container.tags // [])}' 2>/dev/null); then
+            echo "  package not found (never published, or no access) - nothing to sweep"
+            exit 0
+          fi
+
+          VERSIONS=$(printf '%s' "$RAW" | jq -s 'sort_by(.created) | reverse')
+          TOTAL=$(printf '%s' "$VERSIONS" | jq 'length')
+          echo "  $TOTAL version(s) in the registry"
+
+          # Rules 1 and 2.
+          KEEP=$(printf '%s' "$VERSIONS" | jq \
+            --arg cutoff "$CUTOFF" \
+            --argjson keep_latest "$KEEP_LATEST" \
+            --arg protected "$PROTECTED_TAGS" \
+            '($protected | split(" ")) as $prot
+             | to_entries
+             | map(select(
+                 .key < $keep_latest
+                 or .value.created >= $cutoff
+                 or (.value.tags | any(. as $t | $prot | index($t) != null))
+               ))
+             | map(.value)')
+
+          # Rule 3: expand every surviving tagged version into the digests its index references.
+          # A single-platform manifest has no `.manifests`, so this contributes nothing today.
+          REG_TOKEN=$(curl -sS -u "$ACTOR:$GH_TOKEN" \
+            "https://ghcr.io/token?scope=repository:$OWNER/$PACKAGE:pull&service=ghcr.io" | jq -r '.token')
+
+          REFERENCED=""
+          for D in $(printf '%s' "$KEEP" | jq -r '.[] | select((.tags | length) > 0) | .digest'); do
+            CHILDREN=$(curl -sS -H "Authorization: Bearer $REG_TOKEN" \
+              -H 'Accept: application/vnd.oci.image.index.v1+json' \
+              -H 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' \
+              -H 'Accept: application/vnd.oci.image.manifest.v1+json' \
+              -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
+              "https://ghcr.io/v2/$OWNER/$PACKAGE/manifests/$D" \
+              | jq -r '.manifests[]?.digest // empty' || true)
+            REFERENCED="$REFERENCED $CHILDREN"
+          done
+
+          KEEP_SET=$( { printf '%s' "$KEEP" | jq -r '.[].digest'; printf '%s' "$REFERENCED" | tr ' ' '\n'; } \
+            | sed '/^$/d' | sort -u )
+
+          KEPT=$(printf '%s\n' "$KEEP_SET" | sed '/^$/d' | wc -l)
+          echo "  keeping $KEPT (recency floor, age, protected tag, or referenced by a kept index)"
+
+          while read -r ID DIGEST CREATED TAGS; do
+            if [ -z "${ID:-}" ]; then
+              continue
+            fi
+            if printf '%s\n' "$KEEP_SET" | grep -qxF "$DIGEST"; then
+              continue
+            fi
+            echo "  delete $DIGEST created=$CREATED tags=[$TAGS]"
+            DELETED=$((DELETED + 1))
+            if [ "$DRY_RUN" = "true" ]; then
+              continue
+            fi
+            gh api --method DELETE "orgs/$OWNER/packages/container/$PACKAGE/versions/$ID" \
+              || echo "    FAILED to delete version $ID"
+          done < <(printf '%s' "$VERSIONS" | jq -r '.[] | "\(.id) \(.digest) \(.created) \(if (.tags | length) > 0 then (.tags | join(",")) else "-" end)"')
+
+          echo
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Dry run complete: $DELETED version(s) would be deleted, $KEPT kept."
+          else
+            echo "Cleanup complete: $DELETED version(s) deleted, $KEPT kept."
+          fi

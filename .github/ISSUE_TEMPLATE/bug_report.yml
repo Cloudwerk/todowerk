@@ -1,0 +1,103 @@
+name: Bug report
+description: Something in TodoWerk behaves differently than it should
+title: "fix: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file this.
+
+        **Security vulnerabilities do not belong here.** Use the Security tab's
+        private reporting, or see
+        [SECURITY.md](https://github.com/Cloudwerk/todowerk/blob/main/SECURITY.md).
+
+        TodoWerk is in early development and has no release. See
+        [docs/status.md](https://github.com/Cloudwerk/todowerk/blob/main/docs/status.md)
+        for what works today and what is known to be missing.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you observe, and what did you expect instead?
+      placeholder: |
+        After signing in, the task list panel stays empty and the console shows a 401.
+        I expected my four To Do lists.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Precise enough that someone else can follow them from a clean checkout.
+      # A placeholder rather than a value: a prefilled `value` counts as non-empty, so
+      # `required` would be satisfied by the untouched skeleton.
+      placeholder: |
+        1. Sign in with a work or school account
+        2. Open the task list panel
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it happen
+      options:
+        - Backend (.NET)
+        - Client (React SPA)
+        - Sign-in / Entra ID
+        - Build, tests, or CI
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: commit
+    attributes:
+      label: Commit
+      description: The commit SHA or branch you are running. There is no release yet.
+      placeholder: 98180f6
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        OS, .NET SDK (`dotnet --version`), Node (`node --version`), browser, and
+        whether the tenant is one you administer.
+      placeholder: |
+        - OS: Windows 11 24H2
+        - .NET SDK: 10.0.100
+        - Node: 22.22.2
+        - Browser: Edge 140
+        - Tenant is one I administer: yes
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Relevant server log output or browser console errors. This is rendered as
+        code, so no backticks needed.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true
+        - label: I am using a work or school (Entra ID) account — consumer Microsoft accounts are out of scope
+          required: true
+        - label: This report contains no secrets, tokens, or real tenant identifiers
+          required: true

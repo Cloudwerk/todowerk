@@ -1,0 +1,172 @@
+name: PR validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-validation-${{ github.ref }}
+  # Cancel superseded PR runs, but let pushes to main queue: cancelling a run that is
+  # publishing a container image can leave a half-pushed `latest` tag behind.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  CLIENT_APP: src/TodoWerk.Web/ClientApp
+  # Throwaway credential for the ephemeral CI container, which is never reachable off the
+  # runner. Deliberately not a secret: fork pull requests get no secrets and would fail.
+  SQL_SA_PASSWORD: Ci_TodoWerk_Passw0rd!
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      # Integration tests run against real SQL Server — never SQLite or EF InMemory.
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2025-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: Ci_TodoWerk_Passw0rd!
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$MSSQL_SA_PASSWORD\" -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 15
+          --health-start-period 30s
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ${{ env.CLIENT_APP }}/package-lock.json
+
+      - name: Restore .NET dependencies
+        run: dotnet restore TodoWerk.slnx
+
+      # The pull request template asks contributors to run this; CI has to agree with them
+      # or the checkbox is theatre. `.gitattributes` pins line endings to LF so this reaches
+      # the same verdict on a Windows workstation as it does on the runner.
+      - name: Verify formatting
+        run: dotnet format TodoWerk.slnx --verify-no-changes --no-restore
+
+      - name: Install client dependencies
+        run: npm ci
+        working-directory: ${{ env.CLIENT_APP }}
+
+      # The client builds first: `dotnet build` treats warnings as errors, and a broken SPA
+      # should fail here rather than surface as a missing wwwroot at publish time.
+      - name: Build client
+        run: npm run build
+        working-directory: ${{ env.CLIENT_APP }}
+
+      # Live since M2, when the client started holding state the server has not confirmed yet:
+      # a target being typed, a preview one keystroke behind, a Change queued but not started.
+      - name: Client tests
+        run: npm test
+        working-directory: ${{ env.CLIENT_APP }}
+
+      - name: Build
+        run: dotnet build TodoWerk.slnx --no-restore --configuration Release
+
+      - name: Unit and architecture tests
+        run: |
+          dotnet test tests/TodoWerk.UnitTests/TodoWerk.UnitTests.csproj \
+            --no-build --configuration Release
+          dotnet test tests/TodoWerk.ArchitectureTests/TodoWerk.ArchitectureTests.csproj \
+            --no-build --configuration Release
+
+      - name: Integration tests
+        env:
+          ConnectionStrings__TodoWerk: Server=localhost,1433;Database=TodoWerk_CI;User Id=sa;Password=${{ env.SQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=False
+        run: >-
+          dotnet test tests/TodoWerk.IntegrationTests/TodoWerk.IntegrationTests.csproj
+          --no-build --configuration Release
+
+  publish-image:
+    # The official Self-Host container image: built only from tested main, published to a
+    # public registry. `dotnet publish` runs the Vite client build itself (see
+    # TodoWerk.Web.csproj), so Node is set up but no explicit npm steps are needed.
+    name: Publish container image
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ${{ env.CLIENT_APP }}/package-lock.json
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish image
+        run: >-
+          dotnet publish src/TodoWerk.Web -c Release /t:PublishContainer
+          -p:ContainerRegistry=ghcr.io
+          -p:ContainerRepository=cloudwerk/todowerk
+          -p:ContainerImageTags='"latest;sha-${{ github.sha }}"'
+
+  migration-check:
+    # A new EF migration changes the shape of a live database; it should never land unnoticed.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Warn when this PR adds an EF migration
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          added=$(git diff --name-only --diff-filter=A "$BASE_SHA" "$HEAD_SHA" \
+            | grep -E '(^|/)Migrations/.*\.cs$' || true)
+
+          if [ -z "$added" ]; then
+            echo "No new EF migrations in this pull request."
+            exit 0
+          fi
+
+          echo "$added" | while read -r file; do
+            echo "::warning file=$file::This pull request adds an EF migration. \
+          Confirm it is reversible and safe to apply to a live database before merging."
+          done

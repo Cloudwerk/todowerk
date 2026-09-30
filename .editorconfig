@@ -1,0 +1,55 @@
+root = true
+
+[*]
+charset = utf-8
+# Pinned so `dotnet format` reaches the same verdict on a Windows workstation and the
+# Linux CI runner. `.gitattributes` keeps the checkout itself consistent.
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{json,yml,yaml,props,targets,csproj,slnx}]
+indent_size = 2
+
+[*.{ts,tsx,js,jsx,css,html}]
+indent_size = 2
+
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_var_when_type_is_apparent = true:suggestion
+
+# AnalysisMode=All enables every CA rule as a build warning (and TreatWarningsAsErrors
+# turns them into errors). The overrides below are deliberate, documented exceptions:
+
+# ConfigureAwait(false): ASP.NET Core has no synchronization context; the calls are pure noise.
+dotnet_diagnostic.CA2007.severity = none
+
+# LoggerMessage source generators: premature for the handful of log sites this app has.
+dotnet_diagnostic.CA1848.severity = none
+
+# Null-guarding public arguments: nullable reference types cover this end to end.
+dotnet_diagnostic.CA1062.severity = none
+
+# "Consider making public types internal": DTOs, options, and DI extension points are
+# public by design; the architecture tests police the boundaries that matter.
+dotnet_diagnostic.CA1515.severity = none
+
+# Internal classes instantiated only via DI look uninstantiated to the analyzer.
+dotnet_diagnostic.CA1812.severity = none
+
+# "Error" collides with a Visual Basic keyword; the SharedKernel Result/Error primitives
+# keep their canonical names, and no VB consumer exists or is planned.
+dotnet_diagnostic.CA1716.severity = none
+
+[tests/**.cs]
+# Test naming uses underscores (Method_Scenario_Expectation).
+dotnet_diagnostic.CA1707.severity = none
+
+# Tests deliberately assert statically-knowable outcomes (e.g. Equals(null) is false);
+# the "avoid dead conditional code" analysis fights the arrange-act-assert pattern.
+dotnet_diagnostic.CA1508.severity = none
+
+# Relative string paths in HttpClient calls read better than wrapping every test URL in a Uri.
+dotnet_diagnostic.CA2234.severity = none

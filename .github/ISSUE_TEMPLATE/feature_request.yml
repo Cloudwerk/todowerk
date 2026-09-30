@@ -1,0 +1,69 @@
+name: Feature request
+description: Propose something TodoWerk should do
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before writing:
+        [docs/status.md](https://github.com/Cloudwerk/todowerk/blob/main/docs/status.md)
+        already covers the hashtag inventory, rename and merge, Marker Rules, background
+        jobs, Tenant Consent, the Teams tab, and licensing, and its roadmap names what is
+        planned. If your idea touches one of those, say what it adds to what is there.
+
+        [docs/adr/](https://github.com/Cloudwerk/todowerk/tree/main/docs/adr) records
+        decisions that are settled. A proposal that contradicts one is welcome, but
+        should say which ADR it contradicts and why the reasoning no longer holds.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: |
+        What are you unable to do today? Describe the situation, not the solution —
+        the best proposals here have come from someone's actual tagging workflow
+        falling over.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What TodoWerk should do about it
+      description: The change you have in mind, in as much or as little detail as you have.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Hashtag management
+        - Sign-in, permissions, or tenant setup
+        - Client / UI
+        - Backend / API
+        - Self-hosting and deployment
+        - Documentation
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Including doing it by hand, or with another tool. What made those inadequate?
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and the roadmap in docs/status.md, and this is not already tracked
+          required: true
+        - label: I read CONTEXT.md and used its vocabulary where it applies
+          required: false

@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TodoWerk.SharedKernel/TodoWerk.SharedKernel.csproj" />
+    <Project Path="src/TodoWerk.Domain/TodoWerk.Domain.csproj" />
+    <Project Path="src/TodoWerk.Application/TodoWerk.Application.csproj" />
+    <Project Path="src/TodoWerk.Infrastructure/TodoWerk.Infrastructure.csproj" />
+    <Project Path="src/TodoWerk.Web/TodoWerk.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TodoWerk.UnitTests/TodoWerk.UnitTests.csproj" />
+    <Project Path="tests/TodoWerk.ArchitectureTests/TodoWerk.ArchitectureTests.csproj" />
+    <Project Path="tests/TodoWerk.IntegrationTests/TodoWerk.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

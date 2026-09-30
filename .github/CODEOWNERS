@@ -1,0 +1,7 @@
+# Every pull request gets a review request routed here. Add more owners as the
+# maintainer set grows; a path-specific line below overrides the catch-all above it.
+#
+# CODEOWNERS only requests the review. Requiring it to pass is a branch protection
+# setting on main ("Require review from Code Owners"), configured in the repository.
+
+* @ChrisOMetz

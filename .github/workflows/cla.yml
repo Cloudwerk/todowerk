@@ -1,0 +1,129 @@
+name: CLA
+
+# TodoWerk is AGPL-3.0 while CloudWerk also operates a hosted service running the same
+# code. Without a signed CLA, outside contributions would be AGPL-only and could not
+# appear in the hosted build. See CLA.md.
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, closed, synchronize]
+
+# Signatures are committed to the cla-signatures branch of this repository, so the
+# default GITHUB_TOKEN needs contents: write. Keeping the signatures here rather than in
+# a separate repository is what lets this workflow run with no personal access token and
+# no secret to configure.
+# actions: write lets the action re-run the pull request's checks once the CLA is signed,
+# so the contributor does not have to push an empty commit to clear the gate.
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  statuses: write
+
+# Signatures all append to one file on one branch. Without serialising, two contributors
+# signing at the same moment race, and the loser's commit fails on a non-fast-forward —
+# or worse, succeeds and drops the other signature. Never cancel a run in progress: that
+# would discard a signature someone already posted.
+concurrency:
+  group: cla-signatures
+  cancel-in-progress: false
+
+jobs:
+  cla:
+    runs-on: ubuntu-latest
+    # Run on every pull request, and on comments only when they are the signature posted
+    # on a pull request — issue_comment fires for ordinary issues too. `contains` rather
+    # than `==` deliberately: a trailing period or a "thanks!" after the sentence should
+    # still reach the action, which does the authoritative matching itself. An over-strict
+    # gate here fails silently — the contributor sees no bot reply and no way forward.
+    if: >-
+      github.event_name == 'pull_request_target' ||
+      (github.event.issue.pull_request &&
+       contains(github.event.comment.body, 'I have read the CLA Document and I hereby sign the CLA'))
+
+    steps:
+      # The store the action reads and writes, created here if it is not there.
+      #
+      # `contributor-assistant` keeps signatures in `signatures/version1/cla.json` on a
+      # branch of this repository and will not create that branch. Without it every run
+      # fails with "Branch cla-signatures not found" and then reports that the committers
+      # have to sign — which reads like a contributor problem and is not one. The red run is
+      # also easy to miss: the `closed` event fires a second run that never reads the store,
+      # goes green, and paints over it.
+      #
+      # So the workflow makes the store rather than assuming it, and a missing branch costs
+      # one silent step instead of a debugging pass. The file is seeded here rather than
+      # left to the action: the action fails the very run in which it would otherwise
+      # create it, so an empty branch is not enough — the run that writes the file still
+      # reports that the committers must sign.
+      #
+      # Git plumbing over the API rather than a checkout: this job has no working tree and
+      # wants none. `gh` and `jq` are both on the runner image.
+      - name: Ensure the signature store exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: cla-signatures
+          STORE: signatures/version1/cla.json
+        run: |
+          set -euo pipefail
+
+          if gh api "repos/$GITHUB_REPOSITORY/contents/$STORE?ref=$BRANCH" >/dev/null 2>&1; then
+            echo "$STORE is already on $BRANCH; nothing to do."
+            exit 0
+          fi
+
+          # An empty store, in the shape the action writes for itself.
+          printf '%s\n' '{' '   "signedContributors": []' '}' > empty-store.json
+
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$BRANCH" >/dev/null 2>&1; then
+            echo "$BRANCH exists but carries no store; adding one."
+            jq -n --arg content "$(base64 -w0 empty-store.json)" --arg branch "$BRANCH" \
+                  '{message: "chore: seed the CLA signature store", content: $content, branch: $branch}' \
+              | gh api "repos/$GITHUB_REPOSITORY/contents/$STORE" --method PUT --input - >/dev/null
+            exit 0
+          fi
+
+          echo "$BRANCH does not exist; creating it with an empty store."
+
+          blob=$(jq -n --rawfile content empty-store.json '{content: $content, encoding: "utf-8"}' \
+            | gh api "repos/$GITHUB_REPOSITORY/git/blobs" --input - --jq .sha)
+
+          tree=$(jq -n --arg path "$STORE" --arg sha "$blob" \
+                       '{tree: [{path: $path, mode: "100644", type: "blob", sha: $sha}]}' \
+            | gh api "repos/$GITHUB_REPOSITORY/git/trees" --input - --jq .sha)
+
+          # No parents: the store shares no history with the code, and never should.
+          commit=$(jq -n --arg tree "$tree" \
+                         '{message: "chore: start the CLA signature store", tree: $tree, parents: []}' \
+            | gh api "repos/$GITHUB_REPOSITORY/git/commits" --input - --jq .sha)
+
+          jq -n --arg ref "refs/heads/$BRANCH" --arg sha "$commit" '{ref: $ref, sha: $sha}' \
+            | gh api "repos/$GITHUB_REPOSITORY/git/refs" --input - >/dev/null
+
+      - name: Check or record CLA signature
+        # Pinned to a commit SHA rather than the v2.6.1 tag: this step runs with a
+        # write-scoped token on every external pull request, and a tag can be repointed
+        # at other code. Dependabot bumps the SHA and the trailing comment together.
+        uses: contributor-assistant/github-action@ca4a40a7d1004f18d9960b404b97e5f30a505a08 # v2.6.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          path-to-signatures: signatures/version1/cla.json
+          path-to-document: https://github.com/Cloudwerk/todowerk/blob/main/CLA.md
+          # The step above guarantees this branch and its store exist, so nothing here
+          # depends on somebody having created them by hand. Leave the branch unprotected:
+          # the action commits every signature it collects to it, and a protected branch
+          # would refuse them.
+          branch: cla-signatures
+          # CloudWerk maintainers are not asked to sign an agreement with their own employer.
+          allowlist: ChrisOMetz,dependabot[bot],github-actions[bot]
+          custom-notsigned-prcomment: >-
+            Thanks for the pull request. TodoWerk is AGPL-3.0 and CloudWerk also operates
+            a hosted service on the same code, so contributions need a Contributor
+            License Agreement before they can be merged. You keep the copyright to your
+            work — please read **[CLA.md](https://github.com/Cloudwerk/todowerk/blob/main/CLA.md)**,
+            then reply below with:
+          custom-pr-sign-comment: I have read the CLA Document and I hereby sign the CLA
+          custom-allsigned-prcomment: All contributors have signed the CLA. Thanks.

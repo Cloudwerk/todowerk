@@ -1,0 +1,26 @@
+<Project>
+  <!--
+    Assembly and repository identity. Nothing here is packed as a NuGet package —
+    these are a web application and its supporting libraries — so the Package*
+    properties are deliberately absent. The license is AGPL-3.0-only; see LICENSE.
+  -->
+  <PropertyGroup>
+    <Product>TodoWerk</Product>
+    <Description>Open-source tooling that adds missing capabilities to Microsoft To Do, starting with hashtag management.</Description>
+    <Authors>CloudWerk GmbH</Authors>
+    <Company>CloudWerk GmbH</Company>
+    <Copyright>Copyright (c) 2026 CloudWerk GmbH</Copyright>
+    <RepositoryUrl>https://github.com/Cloudwerk/todowerk</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisMode>All</AnalysisMode>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <SpaRoot>ClientApp\</SpaRoot>
+    <!-- Keeps the local Entra ID client secret out of the repo; see README. -->
+    <UserSecretsId>b143be53-fb52-46ef-b152-2b554a3af6e6</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TodoWerk.Application\TodoWerk.Application.csproj" />
+    <ProjectReference Include="..\TodoWerk.Infrastructure\TodoWerk.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="TodoWerk.IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Markdig" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.Identity.Web" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      The terms of use and the privacy notice are served by the application (Legal/LegalPages.cs),
+      and these are the documents themselves rather than a copy of them: the app registration, the
+      Teams manifest and a Store listing all point at the rendered pages, and a second copy would be
+      the one nobody remembered to update. They live at the repository root because they also have
+      to be readable by anybody who only ever sees the source.
+    -->
+    <EmbeddedResource Include="..\..\TERMS.md" LogicalName="TodoWerk.Web.Legal.terms.md" />
+    <EmbeddedResource Include="..\..\PRIVACY.md" LogicalName="TodoWerk.Web.Legal.privacy.md" />
+    <!--
+      The About Page and the Administrator's Guide (Handbook/HandbookPages.cs) are served the same
+      way and for the same reason: the App Package names both, and the page a Teams administrator
+      reads before allowing the product has to be the file in the repository rather than a copy.
+    -->
+    <EmbeddedResource Include="..\..\handbook\about.md" LogicalName="TodoWerk.Web.Handbook.about.md" />
+    <EmbeddedResource Include="..\..\handbook\administrators.md" LogicalName="TodoWerk.Web.Handbook.administrators.md" />
+    <!--
+      The app icon in the header of every served document, inlined as a data: address so the page
+      stays self-contained. It is the Teams App Package's colour icon, so the header matches the tile.
+    -->
+    <EmbeddedResource Include="..\..\packaging\teams\color.png" LogicalName="TodoWerk.Web.Documents.icon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The SPA is built by Vite, not MSBuild; keep its sources out of the .NET content globs. -->
+    <Content Remove="$(SpaRoot)**" />
+    <None Remove="$(SpaRoot)**" />
+    <None Include="$(SpaRoot)**" Exclude="$(SpaRoot)node_modules\**" />
+  </ItemGroup>
+
+  <Target Name="EnsureNodeModules" BeforeTargets="BuildClient">
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm ci" />
+  </Target>
+
+  <!-- Publish builds the client into wwwroot and ships it as static content. -->
+  <Target Name="BuildClient" AfterTargets="ComputeFilesToPublish">
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
+    <ItemGroup>
+      <DistFiles Include="wwwroot\**" />
+      <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>%(DistFiles.Identity)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+</Project>

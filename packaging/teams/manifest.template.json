@@ -1,0 +1,49 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.30/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.30",
+  "localizationInfo": {
+    "defaultLanguageTag": "en-us"
+  },
+  "version": "{{Version}}",
+  "id": "{{ManifestId}}",
+  "developer": {
+    "name": "{{DeveloperName}}",
+    "mpnId": "{{MpnId}}",
+    "websiteUrl": "https://{{Host}}/about",
+    "privacyUrl": "https://{{Host}}/legal/privacy",
+    "termsOfUseUrl": "https://{{Host}}/legal/terms"
+  },
+  "name": {
+    "short": "TodoWerk",
+    "full": "TodoWerk Hashtag Manager"
+  },
+  "description": {
+    "short": "See every hashtag in your Microsoft To Do tasks, and fix the ones that drifted.",
+    "full": "TodoWerk reads the hashtags out of your own Microsoft To Do tasks and shows you what you actually have: how often each one is used, across how many lists, when it was last touched, and which ones look like mistakes — written more than one way, nearly identical to another, or not edited in months.\n\nThen it fixes them. Rename a hashtag, settle one written several ways onto a single spelling, or fold several into one. Only the hashtag's own text is rewritten — spacing, punctuation and the rest of the sentence are left exactly as they were.\n\n**Every change is safe to make**\n\n- Previewed as the exact task titles it would rewrite, before anything happens\n- Runs in the background against Microsoft To Do\n- Can be undone as a whole for thirty days\n\n**Your tasks stay yours**\n\nTodoWerk works with your own account and reaches only your own tasks. It never manages anybody else's hashtags, never counts hashtags across people, and never lets one person change a colleague's tasks. An administrator can approve it once for the whole organisation, and anybody can have everything TodoWerk holds about them destroyed from inside the app.\n\n**What you need**\n\nTodoWerk runs as a personal tab in Microsoft Teams, in Outlook and in the Microsoft 365 app, and in a web browser. To use this app, you need an active Microsoft 365 work or school account with Microsoft To Do. Personal Microsoft accounts are not supported. No separate account or sign-up with CloudWerk is needed. Depending on your organisation's settings, an administrator may need to approve TodoWerk before you can sign in; the page for administrators explains what that approval grants and what it does not. The hashtag workbench is designed for a desktop or laptop screen. TodoWerk is available in English.\n\n**What it costs**\n\nTodoWerk is offered on this service at no charge, and there is nothing to buy inside it. On first sign-in every person receives a personal licence at no charge, valid for one year from that day; when it ends, TodoWerk says so, and the About page names whom to contact. CloudWerk GmbH may introduce a paid subscription for this service at a later date. Should that happen, it will be announced in advance and this description will be updated before any charge applies. The software itself is open source under the GNU Affero General Public License v3.0 and can always be run on your own infrastructure.\n\n- [Get started and help](https://{{Host}}/about)\n- [For administrators](https://{{Host}}/administrators)"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#006970",
+  "staticTabs": [
+    {
+      "entityId": "todowerk.workbench",
+      "name": "Hashtags",
+      "contentUrl": "https://{{Host}}/teams?theme={app.theme}&v1theme={theme}",
+      "websiteUrl": "https://{{Host}}/",
+      "scopes": ["personal"],
+      "context": ["personalTab"]
+    }
+  ],
+  "permissions": ["identity"],
+  "defaultInstallScope": "personal",
+  "publisherDocsUrl": "https://{{Host}}/administrators",
+  "validDomains": ["{{Host}}"],
+  "webApplicationInfo": {
+    "id": "{{ClientId}}",
+    "resource": "{{ApplicationIdUri}}"
+  },
+  "showLoadingIndicator": true,
+  "isFullScreen": false
+}

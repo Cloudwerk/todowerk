@@ -1,0 +1,21 @@
+# Line endings are normalised to LF in the repository and in the working tree on every
+# platform. Without this, a Windows checkout produces CRLF files that `dotnet format
+# --verify-no-changes` rejects on the Linux CI runner (and the reverse), so contributors
+# and CI disagree about a file neither of them edited.
+* text=auto eol=lf
+
+# Windows-only tooling that genuinely needs CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Never touched by normalisation.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.snk binary
