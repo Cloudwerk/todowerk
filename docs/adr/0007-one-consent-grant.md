@@ -20,15 +20,14 @@ scope in M2 "as a separate incremental-consent step rather than a wider grant up
 The write scope has to be in the durable token cache *before* a Change is queued, because the
 thing that performs the write is a background worker with no browser attached (ADR-0002). A
 worker cannot prompt anybody. So incremental consent does not mean "ask when we need it" — it
-means "ask at the last interactive moment before we need it", which is the confirmation click on
-a destructive operation. That is the worst available moment to interrupt somebody with a consent
-dialog they have to read.
+means "ask at the last interactive moment before we need it", which is the moment somebody
+confirms a destructive operation. That is the worst available moment to interrupt somebody with a
+consent dialog they have to read.
 
-Against that, the honest description of what the incremental version buys is: a user who only
-ever reads their inventory does not grant write access. That is a real benefit and it is the one
-being traded away here. It is worth less than one clear decision at sign-in, in a product whose
-entire purpose is to change hashtags — a read-only TodoWerk user is a user who has not started
-yet.
+Against that, what the incremental version buys is this: a user who only ever reads their
+inventory does not grant write access. That is a real benefit, and it is the one this decision
+gives up. It is worth less than one clear decision at sign-in in a product whose purpose is to
+change hashtags: a read-only TodoWerk user is a user who has not started yet.
 
 The admin-facing argument runs the same way. An organisation evaluating the app sees one
 permission list and makes one decision, rather than discovering a second permission request
@@ -47,13 +46,13 @@ later and having to work out whether something changed.
 ## Consequences
 
 - Every TodoWerk user grants write access to their tasks, including one who only looks.
-  [SECURITY.md](../../SECURITY.md) and the app-registration steps in CONTRIBUTING say so plainly.
+  [SECURITY.md](../../SECURITY.md) and the app-registration steps in CONTRIBUTING say so.
 - Token cache entries issued under the narrower scope cannot silently acquire the wider one:
   MSAL raises `MsalUiRequiredException`, which the gateway already maps to reconnect-required, so
   those users are asked to sign in once and their background syncs stop until they do. Only an
   account that signed in before the write scope joined the grant is affected.
-- The reconnect path is now load-bearing for an ordinary upgrade rather than only for a 90-day
-  expiry, which is part of why the Workbench must stop deciding "offer sign-in" by matching a
-  sentence in the failure text.
+- The reconnect path now serves an ordinary upgrade as well as a 90-day expiry. That is part of
+  why the Workbench decides "offer sign-in" from a failure code (`ReconnectRequired`) and not by
+  matching a sentence in the failure text.
 - `GraphScopes.SignIn` is a one-element list and the comment promising incremental consent is
   deleted rather than implemented.

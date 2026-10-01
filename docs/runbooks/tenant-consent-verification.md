@@ -1,11 +1,11 @@
 # Verifying Tenant Consent against a real tenant
 
 Every automated test of Tenant Consent stops at TodoWerk's own two ends of the round trip: the
-redirect it builds and the callback it will believe. The middle belongs to Microsoft, and the first
-time it was observed, on 2026-08-25, it did something no invented test parameter had guessed — the decline redirect carried `admin_consent=True` *alongside*
-`error=consent_required`, and an administrator clicking Cancel was recorded as an approval. This
-runbook exists so that observation is repeated, not re-derived, whenever the flow meets a new
-environment.
+redirect it builds and the callback it will believe. The middle belongs to Microsoft. When it was
+first observed, on 2026-08-25, it did something no invented test parameter had guessed: the decline
+redirect carried `admin_consent=True` *alongside* `error=consent_required`, and an administrator who
+selected Cancel was recorded as an approval. Use this runbook to repeat that observation whenever
+the flow meets a new environment, instead of working it out again.
 
 ## When to run this
 
@@ -23,8 +23,8 @@ environment.
 - An account able to grant tenant-wide admin consent (Global Administrator, or a role Entra ID
   accepts for this app).
 - A second member account in the tenant that has **never** consented to TodoWerk individually —
-  the no-prompt check proves nothing with an account that once consented. A fresh test user is the
-  clean choice.
+  the no-prompt check proves nothing with an account that once consented. A new test user is the
+  safest choice.
 - TodoWerk answering at the origin under test
   ([CONTRIBUTING § Development setup](../../CONTRIBUTING.md#development-setup) for running from
   source).
@@ -36,16 +36,16 @@ pwsh ./scripts/Verify-TenantConsent.ps1                                   # loca
 pwsh ./scripts/Verify-TenantConsent.ps1 -BaseUrl https://your-origin      # a deployed instance
 ```
 
-The wizard performs nothing itself — every action is yours, in a browser, as the administrator. It
-opens the right pages, says what to click, asks what you observed, and walks the checks in a
-deliberate order: **decline before approve**, so the records-nothing path is observed against a
-genuinely empty state.
+The wizard performs no step itself. You take every action, in a browser, as the administrator. The
+wizard opens the right pages, says what to select, asks what you observed, and runs the checks in a
+deliberate order: **decline before approve**, so that the path that records nothing is observed
+against an empty state.
 
 ## What it produces
 
-A dated markdown results file **outside the repository** (default: your user profile;
-`-ResultsPath` overrides). It names your tenant — this repository is public, so findings travel as
-generalised issue comments, never as the raw file.
+A dated Markdown results file **outside the repository** (by default in your user profile;
+`-ResultsPath` overrides this). The file names your tenant. This repository is public, so share
+findings as generalised issue comments, never as the raw file.
 
 ## What the real round trip looks like
 
@@ -59,14 +59,16 @@ Observed against a live tenant on 2026-08-25; shapes generalised:
   echoed back.
 
 The callback therefore records a grant only when the redirect carries no `error`, the state
-matches, and the tenant is named and matches — anything else records nothing
-([ADR-0008](../adr/0008-tenant-consent-is-delegated.md) for why the callback can never be treated
-as proof).
+matches, and the tenant is named and matches. Anything else records nothing.
+[ADR-0008](../adr/0008-tenant-consent-is-delegated.md) explains why the callback can never be
+treated as proof.
 
 ## Capturing redirects byte-exact
 
 TodoWerk neither stores nor logs what a failed callback carried, so the browser is the only
-witness. Either tick **Preserve log** in
-the DevTools Network tab before clicking Cancel/Accept — or stop the TodoWerk process at the
-consent screen, click, and read the full query string from the failed navigation, then restart and
-replay the URL. The second method is how the shapes above were captured.
+witness. Use one of two methods:
+
+- In the DevTools Network tab, select **Preserve log** before you select Cancel or Accept.
+- Stop the TodoWerk process at the consent screen, select Cancel or Accept, and read the full query
+  string from the failed navigation. Then restart TodoWerk and replay the URL. The shapes above were
+  captured this way.

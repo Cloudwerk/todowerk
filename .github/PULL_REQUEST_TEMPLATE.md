@@ -28,7 +28,7 @@ Closes #
 - [ ] I have read [CONTRIBUTING.md](https://github.com/Cloudwerk/todowerk/blob/main/CONTRIBUTING.md) and signed the [CLA](https://github.com/Cloudwerk/todowerk/blob/main/CLA.md)
 - [ ] Uses the vocabulary in [CONTEXT.md](https://github.com/Cloudwerk/todowerk/blob/main/CONTEXT.md) rather than inventing new terms
 - [ ] Behavioural changes come with tests in the right suite (unit / architecture / integration)
-- [ ] No new warnings — the build treats them as errors, and no suppressions were added to get it green
+- [ ] No new warnings (the build treats them as errors), and no suppressions were added to make it pass
 - [ ] No secrets, connection strings, or real tenant identifiers in the diff
 - [ ] Contradicts no ADR in [docs/adr/](https://github.com/Cloudwerk/todowerk/tree/main/docs/adr), or explains below which one it revises and why
 - [ ] `docs/status.md` and `docs/CHANGELOG.md` updated if this changes what works today

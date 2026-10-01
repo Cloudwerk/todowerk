@@ -15,10 +15,10 @@
     evaluate the product.
 
     UNATTENDED USE IS IMPOSSIBLE, AND NOT BECAUSE THIS SCRIPT DECLINES TO OFFER IT. Publishing to an
-    organisation's app catalog requires AppCatalog.ReadWrite.All, which Microsoft grants as a
-    delegated permission only - there is no application permission for it, so there is no client
-    credential that can do this and no version of this script that could run in a pipeline. It signs
-    an administrator in interactively, every time, with a device code.
+    organisation's app catalog requires AppCatalog.ReadWrite.All as a delegated permission: the
+    Graph publish operation supports no application permission, so there is no client credential
+    that can do this and no version of this script that could run in a pipeline. It signs an
+    administrator in interactively, every time, with a device code.
 
 .PARAMETER PackagePath
     The .zip built by New-TodoWerkTeamsAppPackage.ps1.

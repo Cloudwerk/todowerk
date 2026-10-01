@@ -1,6 +1,6 @@
 # One SQL database holds everything: the hashtag index TodoWerk maintains itself, sync state, and the job queue
 
-Microsoft Graph offers no server-side text search over To Do tasks, so an inventory of hashtags cannot be computed on demand — TodoWerk maintains its own index: tag occurrences extracted from task titles, kept current by delta sync, with freshness shown in the UI and a manual re-scan available. That index, the delta-sync tokens, and the background job queue (including the per-task old-title/new-title journal that makes undo possible) all live in one SQL Server database, accessed through EF Core.
+Microsoft Graph offers no server-side text search over To Do tasks, so an inventory of hashtags cannot be computed on demand. TodoWerk maintains its own index: tag occurrences extracted from task titles, kept current by delta sync, with freshness shown in the UI and a manual re-scan available. That index, the delta-sync tokens, and the background job queue (including the per-task old-title/new-title journal that makes undo possible) all live in one SQL Server database, accessed through EF Core.
 
 ## Considered options
 
@@ -33,14 +33,14 @@ Returning needs no code, because the sign-in stamp lands in `OnTokenValidated` b
 page renders and the next poll queues the overdue sync; the freshness indicator this decision
 already required covers the seconds in between.
 
-What this makes load-bearing is the sentence on `TenantMember` that a background scan is not
-somebody using the product. It was written for the statistics ([ADR-0009](0009-what-todowerk-stores-about-a-person.md));
-the schedule now reads the same record for the same reason, and a write to `LastSignedInAt` from
-anywhere but a human sign-in would silently keep an absent person's index — and their Licence
-checks — alive. The window must exceed the sync interval, which startup validation enforces, and
-is deliberately a number no other setting uses, so that a test reading the log line can tell a
-crossed wire from a coincidence.
+The schedule therefore depends on the sentence on `TenantMember` that a background scan is not
+somebody using the product. That sentence was written for the statistics ([ADR-0009](0009-what-todowerk-stores-about-a-person.md));
+the schedule now reads the same record for the same reason. A write to `LastSignedInAt` from
+anywhere but a human sign-in would silently keep an absent person's index, and their Licence
+checks, alive. The window must exceed the sync interval, which startup validation enforces. It is
+deliberately a number no other setting uses, so that a test reading the log line can tell a mix-up
+between settings from a coincidence.
 
 The consequence above stands, narrowed: an owned index is by definition sometimes stale, and for
 somebody who is present it is stale by at most the sync interval. For somebody who is not, it is
-as stale as their absence, which is the honest number.
+as stale as their absence is long.

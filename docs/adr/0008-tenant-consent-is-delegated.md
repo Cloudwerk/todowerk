@@ -10,7 +10,7 @@ This reverses the Org Mode described in ADR-0007, SECURITY.md and the M3 roadmap
 which was app-only consent carrying `Tasks.Read.All` / `Tasks.ReadWrite.All`, an admin-curated
 Inclusion List of whose tasks were indexed, and central management of other people's Hashtags. None
 of that will be built. It continues ADR-0007's one-grant rule rather than departing from it: one
-prompt, covering everything TodoWerk does, asked of one administrator instead of of everybody.
+prompt, covering everything TodoWerk does, asked of one administrator and not of everybody.
 
 ## Why the app-only version does not survive contact with Exchange
 
@@ -21,8 +21,8 @@ Policies, and their successor, Exchange App RBAC.
 
 Neither covers Tasks. Both scope **Mail**, **Calendars**, **Contacts** and **Mailbox settings**;
 `Tasks.*` is not among the resource scopes they can restrict. So an app-only grant could never have
-been narrowed to a subset of mailboxes at all. The Inclusion List was not merely unbuilt — it was
-unenforceable in principle. TodoWerk would have held a credential able to read every task title in
+been narrowed to a subset of mailboxes at all. The Inclusion List was never built, and it could
+not have been enforced even in principle. TodoWerk would have held a credential able to read every task title in
 the tenant, with a list inside TodoWerk's own database as the only thing standing between that
 credential and the mailboxes of people who never asked for it. A filter in the application that
 holds the keys is not a boundary; it is a promise.
@@ -36,7 +36,7 @@ unreachable.
 
 Tenant-wide management of other people's Hashtags, which was the headline of the old Org Mode. An
 administrator cannot see the organisation's tags, cannot rename across colleagues' tasks, and cannot
-clean up on somebody's behalf. That is a real feature and it is the one being traded away.
+clean up on somebody's behalf. That is a real feature, and this decision gives it up.
 
 It is worth less than it looks. The value of a tenant-wide rename is highest exactly where it is
 least defensible — rewriting task titles in mailboxes whose owners did not ask — and the product
@@ -49,7 +49,7 @@ Tenant Overview reports counts.
 - **App-only consent with an Inclusion List** — rejected above. Exchange App RBAC and Application
   Access Policies do not scope Tasks, so the list could not be enforced anywhere but inside
   TodoWerk, and the credential it was meant to bound reads every mailbox in the tenant.
-- **App-only consent with no Inclusion List** — rejected as the same trade without the fig leaf: a
+- **App-only consent with no Inclusion List** — rejected as the same trade without even a pretence of a limit: a
   tenant-wide read of every task title, taken once by one administrator, for a hashtag manager.
 - **Delegated Tenant Consent, no tenant-wide reporting at all** — rejected as insufficient. The
   problem that starts this milestone is an employee in a tenant where user consent is disabled by
@@ -82,8 +82,8 @@ Tenant Overview reports counts.
   remembers in a protected short-lived cookie and records nothing unless the state matches and names
   the same tenant. Without that check, anybody could switch off another organisation's invitation to
   approve.
-- Within one tenant, that check is all there is. The admin-consent flow returns no signed response —
-  nothing in the redirect proves it came from Microsoft — so a signed-in member of the tenant can
+- Within one tenant, that check is all there is. The admin-consent flow returns no signed response
+  (nothing in the redirect proves it came from Microsoft), so a signed-in member of the tenant can
   start the flow and then reach the callback themselves, and TodoWerk will record a grant nobody
   made. That cannot be closed without asking Graph whether the grant exists, which is the directory
   permission this ADR declines. So the consequence is bounded instead: a recorded grant hides the
@@ -95,5 +95,5 @@ Tenant Overview reports counts.
   [ADR-0009](0009-what-todowerk-stores-about-a-person.md) — nobody can sign in after a revocation, so
   everybody goes dormant and the tenant clears itself.
 - There is no TodoWerk-side notion of an administrator. No role check, no app role, no permission-
-  denied path. The person who clicks the consent link is whoever Entra ID will let approve, and the
+  denied path. The person who selects the consent link is whoever Entra ID will let approve, and the
   Tenant Overview is visible to every signed-in user of the tenant.

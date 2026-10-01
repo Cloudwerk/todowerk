@@ -11,8 +11,7 @@ TodoWerk asks about and never holds.
 
 A person is licensed by their tenant's Tenant Licence if there is one, otherwise by their own
 Personal Licence or Trial, otherwise not at all. The Hosted Service resolves this **per person** —
-tenant id and object id together — and a person with none meets a closed door while their colleagues
-carry on. The object id is what crosses to the authority to make that possible; TodoWerk stores
+tenant id and object id together — and a person with none is refused while their colleagues carry on. The object id is what crosses to the authority to make that possible; TodoWerk stores
 nothing new to do it ([ADR-0009](0009-what-todowerk-stores-about-a-person.md) is untouched).
 
 ## Considered options

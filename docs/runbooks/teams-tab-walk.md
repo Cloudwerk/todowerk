@@ -1,23 +1,22 @@
 # Walking the Teams tab against a real tenant
 
 M4's entire surface is integration with somebody else's client, on three platforms, and a fake
-proves nothing at all about any of it. Every automated test of the tab stops at TodoWerk's own two
-ends: the token it would accept and the session it would issue. Everything in between —
-`app.initialize()`, `getAuthToken()`, the theme placeholders, the popup, the frame — belongs to
-Microsoft.
+proves nothing about any of it. Every automated test of the tab stops at TodoWerk's own two ends:
+the token it would accept and the session it would issue. Everything in between belongs to
+Microsoft: `app.initialize()`, `getAuthToken()`, the theme placeholders, the popup and the frame.
 
 The tab has been walked on Teams desktop, Teams web and a real Android device. Two cells were not
 reachable and are recorded as gaps in [docs/status.md](../status.md): Safari, and the first-ever
 user of a tenant without Tenant Consent. What follows is the procedure, kept for those two cells,
 for a Self-Host walking its own deployment, and for the next milestone that changes the tab.
 
-The milestone does not close until this has been walked. The precedent is not an argument, it is a
-record: M1 shipped without a walk and left the id-collation defect unfound for weeks; M2's walk
-found a silent title truncation that undo could not recover; M3's found an administrator's Cancel
-being recorded as an approval. Both were defects no fake could have shown.
+The milestone does not close until this has been walked. The record supports the rule: M1 shipped
+without a walk and left the id-collation defect unfound for weeks. M2's walk found a silent title
+truncation that undo could not recover, and M3's found an administrator's Cancel being recorded as
+an approval. No fake could have shown either defect.
 
-**Write down what was observed, not what was expected.** A cell that passed is worth recording as
-much as one that failed — a "pass" nobody wrote down is a cell nobody knows was walked.
+**Write down what was observed, not what was expected.** Record a cell that passed as carefully as
+one that failed: a pass that nobody wrote down is a cell that nobody knows was walked.
 
 ## Before you start
 
@@ -37,7 +36,7 @@ much as one that failed — a "pass" nobody wrote down is a cell nobody knows wa
 
 ## Getting a host Teams will load
 
-Three things at once, and the third is the one that catches people out:
+The host needs three things at once, and the third is the easiest to miss:
 
 1. **Public HTTPS.** Teams mobile is a phone on somebody else's network, so a LAN address is not
    enough.
@@ -50,8 +49,8 @@ Three things at once, and the third is the one that catches people out:
 
 ### Microsoft Dev Tunnels
 
-Microsoft's own, which is what its Teams documentation now uses, and installed from winget so
-endpoint protection does not treat it as a remote-access tool:
+Dev Tunnels is Microsoft's own tunnel service and the one its Teams documentation uses. Install it
+from winget so that endpoint protection does not treat it as a remote-access tool:
 
 ```powershell
 winget install Microsoft.devtunnel
@@ -61,35 +60,37 @@ devtunnel port create -p 7080 --protocol https
 devtunnel host todowerk-dev
 ```
 
-The host is then `todowerk-dev-7080.<region>.devtunnels.ms`, and it is the same one tomorrow —
-`devtunnel create` without an id makes a throwaway tunnel that is deleted when the process exits.
-Tunnels expire after 30 days of inactivity unless `--expiration` says otherwise.
+The host is then `todowerk-dev-7080.<region>.devtunnels.ms`, and it stays the same across
+restarts. `devtunnel create` makes a persistent tunnel; `devtunnel host` without a tunnel id makes a
+temporary tunnel that is deleted when the process exits
+([Dev tunnels FAQ](https://learn.microsoft.com/azure/developer/dev-tunnels/faq#how-can-i-create-a-persistent-tunnel)).
+Tunnels expire after 30 days of inactivity unless `--expiration` sets another period.
 
 **Test this before anything else:** dev tunnels answer the first `GET` for `text/html` from each new
-browser with an anti-phishing interstitial, skipped only once somebody has clicked Continue *in that
-browser*
+browser with an anti-phishing interstitial, skipped only once somebody has selected Continue *in
+that browser*
 ([Dev tunnels security](https://learn.microsoft.com/azure/developer/dev-tunnels/security#anti-phishing-protection)).
 A tab load is exactly that request, and the Teams desktop client's webview, Teams mobile's webview
-and a desktop browser are three separate cookie jars. Clicking Continue in Edge does not clear it
-for the other two. If the interstitial appears where the Workbench should be, that is the tunnel and
-not TodoWerk — and it is a reason to use the fallback rather than to start filing defects.
+and a desktop browser keep three separate cookie stores. Selecting Continue in Edge does not clear
+the interstitial for the other two. If the interstitial appears where the Workbench should be, the
+tunnel is the cause, not TodoWerk. Switch to the fallback instead of filing defects.
 
-Dev tunnels can also be switched off tenant-wide by Group Policy, anonymous access included.
+Group Policy can also turn off dev tunnels tenant-wide, including anonymous access.
 
 ### Fallback: a hostname of your own
 
 A named [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
-bound to a subdomain of a domain you control — `todowerk-dev.example.com` — has no interstitial, a
-certificate every client trusts, and a hostname that never changes for any reason. It costs a DNS
-record and is the closer rehearsal for what production will be.
+bound to a subdomain of a domain you control, such as `todowerk-dev.example.com`, has no
+interstitial, a certificate every client trusts, and a hostname that never changes. It costs one DNS
+record and is closer to what production will be.
 
-Beyond that is not tunnelling at all: CI publishes `ghcr.io/cloudwerk/todowerk` on every push to
-`main`, so deploying that image somewhere with a real hostname walks the tab against something
-shaped like the deployment M6 has to produce anyway.
+Beyond that is not tunnelling at all: CI publishes `ghcr.io/cloudwerk/todowerk` from `main`, so
+deploying that image somewhere with a real hostname walks the tab against something shaped like
+a production deployment.
 
 ## The matrix
 
-Every cell is walked rather than reasoned about.
+Walk every cell; do not reason about it instead.
 
 ### Platforms
 
@@ -103,16 +104,16 @@ Every cell is walked rather than reasoned about.
 
 A manifest at schema 1.13 or later offers the tab in Outlook and the Microsoft 365 app whether or
 not anybody meant it to, and Store validation tests every host the package targets
-([ADR-0010](../adr/0010-teams-tab-session-and-framing.md), amended 2026-09-09). Per host: the tab
-renders with no `frame-ancestors` error in the console; sign-in is silent on the consented tenant
-and the consent popup appears on the unconsented account; one rename runs end to end; *Open in
-browser* leaves the host; the theme follows the host's. In Outlook on the web, note the origin in
-the address bar — `outlook.cloud.microsoft` or `outlook.office.com` — because that decides which
-entry in the policy did the work.
+([ADR-0010](../adr/0010-teams-tab-session-and-framing.md), amended 2026-09-09). In each host, check
+that the tab renders with no `frame-ancestors` error in the console; sign-in is silent on the
+consented tenant and the consent popup appears on the unconsented account; one rename runs end to
+end; *Open in browser* leaves the host; and the theme follows the host's. In Outlook on the web,
+note the origin in the address bar (`outlook.cloud.microsoft` or `outlook.office.com`), because it
+decides which entry in the policy did the work.
 
 | Cell | What to do | Observed |
 | --- | --- | --- |
-| New Outlook on the web | Apps → TodoWerk. The checks above. | |
+| New Outlook on the web | Select Apps → TodoWerk, then make the checks above. | |
 | Classic Outlook on the web (`outlook.office.com`) | The same. "Refused to connect" here means the policy's `frame-ancestors` is missing one of Microsoft's hosts ([ADR-0010](../adr/0010-teams-tab-session-and-framing.md)). | |
 | New Outlook on Windows | The same, inside the desktop app's webview. | |
 | Microsoft 365 app on the web (m365.cloud.microsoft) | The same. | |
@@ -124,8 +125,8 @@ entry in the policy did the work.
 | Cell | What to do | Observed |
 | --- | --- | --- |
 | Tenant **with** Tenant Consent granted | Open the tab as somebody who has never used TodoWerk. Sign-in is silent; no popup appears at any point. | |
-| Tenant **without** it, first-ever user | The consent card appears rather than a spinner. Pressing the button opens a popup, the popup completes, and the tab renders the Workbench without a reload prompt. | |
-| The same, popup closed early | The tab says so in a sentence and the button can be pressed again. | |
+| Tenant **without** it, first-ever user | The consent card appears, not a spinner. Selecting the button opens a popup, the popup completes, and the tab renders the Workbench without a reload prompt. | |
+| The same, popup closed early | The tab says so in a sentence, and the button can be selected again. | |
 
 ### Safari
 
@@ -133,7 +134,7 @@ entry in the policy did the work.
 | --- | --- | --- |
 | Teams on the web, in Safari | Expected to fail: Safari blocks the unpartitioned third-party cookie ([ADR-0010](../adr/0010-teams-tab-session-and-framing.md)). Confirm the blocked-cookie card appears, that it says something true, and that it offers the browser. Confirm it does **not** retry in a loop. | |
 | The server log, for the same visit | One warning, saying the session did not survive the frame and naming `/api/me` and the user agent. Copy the user agent into the Observed column — it is the evidence that decides the row below, and the only record of it. Confirm no such line is written by an ordinary signed-out visit to the browser Workbench. **Read it as evidence from a walk you are performing, not as proof about an unknown visitor**: the header that produces the line is asserted by the client, so anybody can write one by hand. It grants no access, and no more than 60 a minute are written — a warning says so when that ceiling is reached. | |
-| Teams mobile's webview | Unknown until this walk. If the same card appears there, that is a finding worth an issue of its own — the mitigation was designed for Safari on the desktop. The log line says which webview it was. | |
+| Teams mobile's webview | Unknown until this walk. If the same card appears there, file it as an issue of its own: the mitigation was designed for Safari on the desktop. The log line says which webview it was. | |
 
 ### Theme
 
@@ -160,14 +161,14 @@ stays untested by design.
 
 ### Worth watching while you are there
 
-Not acceptance criteria, but the questions no fake can answer:
+These are not acceptance criteria. They are questions that no fake can answer:
 
 - **Does a background scan still work after a Teams-only sign-in?** The tab's session comes from an
-  on-behalf-of exchange rather than from an authorization code, and MSAL files the two in different
-  partitions of the token cache. That broke the tab outright when it was first written and is now
-  fixed and covered by tests — but the tests run against a fake Entra ID, and what they prove is
-  that MSAL's partitioning behaves as expected, not that a real token survives a real hour. Sign in
-  through the tab only, wait for the next scheduled sync, and see whether the index moves.
+  on-behalf-of exchange, not from an authorization code, and MSAL files the two in different
+  partitions of the token cache. This once broke the tab outright. It is fixed and covered by tests,
+  but the tests run against a fake Entra ID: they prove that MSAL's partitioning behaves as
+  expected, not that a real token survives a real hour. Sign in through the tab only, wait for the
+  next scheduled sync, and see whether the index moves.
 - **Does the first paint match the Teams theme, or flash?** Watch a cold load in dark mode.
 - **What does a slow network do to the popup?** Teams gives it a bounded time to report back.
 

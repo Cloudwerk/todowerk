@@ -34,7 +34,7 @@ regex does not:
 The decisive argument is that this choice does not depend on the empirical question. If the
 clients turn out to be case-sensitive when searching, then `#Work` and `#work` failing to
 find each other is precisely the defect the user bought TodoWerk to fix — one inventory row
-carrying a casing-inconsistency flag is still the honest model. If they are case-insensitive,
+carrying a casing-inconsistency flag is still the right model. If they are case-insensitive,
 the same row is right and the flag is merely cosmetic. The probe result changes the severity
 copy on the flag; it does not change the schema. M1 is therefore not blocked on it.
 
@@ -64,9 +64,9 @@ Upper-casing is the direction that survives round-tripping, and it folds Greek f
 changes nothing in the table below — .NET applies simple case mapping, so `ß` is left alone
 either way — and the key is never displayed, so its case is free.
 
-This looks like over-specification until you measure what the alternatives actually do.
-Both tables below were run rather than recalled — .NET 10.0.10 with ICU, and SQL Server 2025
-(17.0.4025.3), whose default collation on a fresh instance is `SQL_Latin1_General_CP1_CI_AS`:
+This looks like over-specification until you measure what the alternatives do. Every cell in
+the table below was measured, on .NET 10.0.10 with ICU and on SQL Server 2025 (17.0.4025.3),
+whose default collation on a fresh instance is `SQL_Latin1_General_CP1_CI_AS`:
 
 | Pair | .NET `Ordinal` | .NET `OrdinalIgnoreCase` | .NET `InvariantCultureIgnoreCase` | SQL `Latin1_General_100_CI_AS` | SQL `..._BIN2` |
 | --- | --- | --- | --- | --- | --- |
@@ -91,10 +91,10 @@ notice in development:
 Binary collation on a key that C# alone computes removes SQL's opinion from the question
 entirely: the database performs byte equality on a value whose folding rules live in one
 place, in testable code. The explicit NFC pass then buys canonical equivalence deliberately
-instead of inheriting it from a collation. The outer NFC is belt-and-braces against case
-mapping denormalising its input.
+instead of inheriting it from a collation. The outer NFC is a second safeguard, in case the
+case mapping denormalises its input.
 
-The same trap exists one layer up and bit during this work: PowerShell's `-ceq` is
+The same trap exists one layer up, and this work ran into it: PowerShell's `-ceq` is
 culture-aware, so it reports NFC and NFD as equal. Comparisons that mean "the same bytes"
 must say `Ordinal` explicitly, in any language.
 
