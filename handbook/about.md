@@ -55,6 +55,8 @@ in English.
 
 {{OperatorLinks}}
 
+{{Build}}
+
 ## Getting help
 
 - **Something is not working**: you cannot sign in, or something that used to work has stopped.
