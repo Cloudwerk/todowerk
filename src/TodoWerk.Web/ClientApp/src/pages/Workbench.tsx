@@ -32,6 +32,7 @@ import { ActiveChangePanel, ChangeHistoryPanel, failureSentence } from '../compo
 import { describeRange } from '../components/describeRange';
 import { DismissButton } from '../components/DismissButton';
 import { HashtagDetailPanel } from '../components/HashtagDetailPanel';
+import { HashtagInventoryList } from '../components/HashtagInventoryList';
 import { HashtagInventoryTable } from '../components/HashtagInventoryTable';
 import { IndexFreshness } from '../components/IndexFreshness';
 import { MarkerRulesPanel } from '../components/MarkerRulesPanel';
@@ -39,10 +40,12 @@ import { SetMarkerDialog } from '../components/SetMarkerDialog';
 import { LicenceBanner } from '../components/LicenceBanner';
 import { useProseStyles } from '../components/prose';
 import { SignInPrompt } from '../components/SignInPrompt';
+import { changesNeedWiderScreen } from '../components/widerScreen';
 import { useEntraRoundTrip } from '../host';
 import { useChangeWorkflow } from '../hooks/useChangeWorkflow';
 import { useMarkerRules } from '../hooks/useMarkerRules';
 import { indexIsBehind } from '../hooks/indexIsBehind';
+import { narrowScreenQuery, useNarrowScreen } from '../hooks/useNarrowScreen';
 
 const PAGE_SIZE = 50;
 
@@ -86,6 +89,17 @@ const useStyles = makeStyles({
   },
   search: {
     minWidth: '260px',
+    // On a phone the box takes the row, and the filter and the count share the one under it.
+    [`@media ${narrowScreenQuery}`]: {
+      flexBasis: '100%',
+      minWidth: 0,
+    },
+  },
+  filter: {
+    [`@media ${narrowScreenQuery}`]: {
+      flexGrow: 1,
+      minWidth: 0,
+    },
   },
   count: {
     marginInlineStart: 'auto',
@@ -131,6 +145,14 @@ const useStyles = makeStyles({
   // and a range is never read over rows it does not describe.
   rangeStale: {
     visibility: 'hidden',
+  },
+  phoneRows: {
+    display: 'flex',
+    flexDirection: 'column',
+    rowGap: tokens.spacingVerticalS,
+  },
+  phoneNote: {
+    color: tokens.colorNeutralForeground3,
   },
   placeholder: {
     display: 'flex',
@@ -181,7 +203,7 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
   },
   // Three short columns rather than three long paragraphs; they wrap to one column when the
-  // panel is narrow, which is also the only layout the Android tab gets.
+  // panel is narrow, which is the layout a phone gets.
   tiles: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
@@ -234,6 +256,7 @@ interface ScanNotice {
  */
 export function Workbench() {
   const styles = useStyles();
+  const narrow = useNarrowScreen();
 
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -597,6 +620,7 @@ export function Workbench() {
             />
 
             <Dropdown
+              className={styles.filter}
               aria-label="Show"
               value={FILTERS.find((option) => option.value === filter)?.label}
               selectedOptions={[filter]}
@@ -660,6 +684,13 @@ export function Workbench() {
                   rescanning={rescanning}
                 />
               )
+            ) : narrow ? (
+              // A phone gets the list and no detail panel: the panel is where a rename or a merge
+              // starts, and those are confirmed from a preview that needs a wider screen.
+              <div className={styles.phoneRows}>
+                <HashtagInventoryList rows={rows} markers={markersByKey} onSetMarker={onSetMarker} />
+                <Caption1 className={styles.phoneNote}>{changesNeedWiderScreen}</Caption1>
+              </div>
             ) : (
               <div className={styles.columns}>
                 <div className={styles.table}>
@@ -738,6 +769,7 @@ export function Workbench() {
           })
         }
         changeInFlight={changes.inFlight}
+        narrow={narrow}
       />
 
       <ChangeHistoryPanel history={changes.history} onUndo={changes.undo} busy={changes.busy} />

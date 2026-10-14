@@ -28,7 +28,9 @@ import {
   PlayRegular,
 } from '@fluentui/react-icons';
 import type { AbandonedMarker, MarkerRule, MarkerRuleMove } from '../api/types';
+import { narrowScreenQuery } from '../hooks/useNarrowScreen';
 import { DismissButton } from './DismissButton';
+import { markersNeedWiderScreen } from './widerScreen';
 
 const useStyles = makeStyles({
   root: {
@@ -45,6 +47,13 @@ const useStyles = makeStyles({
     alignItems: 'center',
     gap: tokens.spacingHorizontalM,
     flexWrap: 'wrap',
+    // On a phone the heading is alone in the row, and the heading's own margins would leave a gap
+    // where the buttons stand on a wider screen.
+    [`@media ${narrowScreenQuery}`]: {
+      '& > h3': {
+        marginBlock: 0,
+      },
+    },
   },
   spacer: {
     marginInlineStart: 'auto',
@@ -60,6 +69,16 @@ const useStyles = makeStyles({
     alignItems: 'center',
     columnGap: tokens.spacingHorizontalM,
     paddingBlock: tokens.spacingVerticalXS,
+    // On a phone the figure goes under the hashtag rather than squeezing it to nothing.
+    [`@media ${narrowScreenQuery}`]: {
+      gridTemplateColumns: 'auto minmax(0, 1fr) auto',
+    },
+  },
+  coverageCell: {
+    [`@media ${narrowScreenQuery}`]: {
+      gridColumn: '2 / -1',
+      gridRow: 2,
+    },
   },
   marker: {
     fontSize: tokens.fontSizeBase500,
@@ -67,6 +86,7 @@ const useStyles = makeStyles({
   },
   tag: {
     fontFamily: tokens.fontFamilyMonospace,
+    overflowWrap: 'anywhere',
   },
   coverage: {
     color: tokens.colorNeutralForeground3,
@@ -120,6 +140,12 @@ interface MarkerRulesPanelProps {
   onRemoveAbandoned: (marker: AbandonedMarker) => void;
   /** True while a Change is queued or running: one per user at a time (ADR-0006). */
   changeInFlight: boolean;
+  /**
+   * True on a phone. Applying and removing open the same preview of every title a rename does, and
+   * that preview needs a wider screen, so their buttons give way to a sentence saying so. Setting,
+   * ordering and deleting a rule write no task and stay.
+   */
+  narrow?: boolean;
 }
 
 /**
@@ -147,6 +173,7 @@ export function MarkerRulesPanel({
   onRemoveOne,
   onRemoveAbandoned,
   changeInFlight,
+  narrow = false,
 }: MarkerRulesPanelProps) {
   const styles = useStyles();
 
@@ -202,24 +229,30 @@ export function MarkerRulesPanel({
 
       <div className={styles.header}>
         <Subtitle1 as="h3">Markers</Subtitle1>
-        <div className={styles.spacer} />
-        <Button
-          appearance="primary"
-          icon={<PlayRegular />}
-          disabled={rules.length === 0 || changeInFlight || busy}
-          onClick={onApplyAll}
-        >
-          Apply all markers…
-        </Button>
-        <Button
-          appearance="secondary"
-          icon={<EraserRegular />}
-          disabled={stale === 0 || changeInFlight || busy}
-          onClick={onRemoveAll}
-        >
-          Remove stale markers…
-        </Button>
+        {!narrow && (
+          <>
+            <div className={styles.spacer} />
+            <Button
+              appearance="primary"
+              icon={<PlayRegular />}
+              disabled={rules.length === 0 || changeInFlight || busy}
+              onClick={onApplyAll}
+            >
+              Apply all markers…
+            </Button>
+            <Button
+              appearance="secondary"
+              icon={<EraserRegular />}
+              disabled={stale === 0 || changeInFlight || busy}
+              onClick={onRemoveAll}
+            >
+              Remove stale markers…
+            </Button>
+          </>
+        )}
       </div>
+
+      {narrow && <Caption1>{markersNeedWiderScreen}</Caption1>}
 
       <Caption1>
         A marker rule says a hashtag carries an emoji. Nothing is written until you apply your
@@ -234,7 +267,7 @@ export function MarkerRulesPanel({
         </MessageBar>
       )}
 
-      {changeInFlight && (
+      {changeInFlight && !narrow && (
         <Caption1>One change at a time. Let the running one finish, or cancel it.</Caption1>
       )}
 
@@ -242,7 +275,7 @@ export function MarkerRulesPanel({
         <Body1 className={styles.empty}>Loading your markers…</Body1>
       ) : rules.length === 0 ? (
         <Body1 className={styles.empty}>
-          No markers yet. Pick a hashtag in the table and choose “Set marker” to give it one.
+          No markers yet. Choose “Set marker” beside a hashtag to give it one.
         </Body1>
       ) : (
         <div className={styles.rows}>
@@ -256,7 +289,9 @@ export function MarkerRulesPanel({
                 #{rule.spelling}
               </Text>
 
-              <Coverage rule={rule} className={styles.coverage} />
+              <div className={styles.coverageCell}>
+                <Coverage rule={rule} className={styles.coverage} />
+              </div>
 
               <div className={styles.actions}>
                 <Tooltip content="Move up" relationship="label">
@@ -286,31 +321,35 @@ export function MarkerRulesPanel({
                     onClick={() => onEdit(rule)}
                   />
                 </Tooltip>
-                <Tooltip content="Apply this marker" relationship="label">
-                  <Button
-                    appearance="subtle"
-                    icon={<PlayRegular />}
-                    aria-label={`Apply the marker for #${rule.spelling}`}
-                    disabled={changeInFlight || busy}
-                    onClick={() => onApplyOne(rule)}
-                  />
-                </Tooltip>
-                <Tooltip
-                  content={
-                    rule.staleTaskCount === 0
-                      ? `No task carries ${rule.marker} without #${rule.spelling}.`
-                      : `Take ${rule.marker} off the tasks that no longer carry #${rule.spelling}.`
-                  }
-                  relationship="label"
-                >
-                  <Button
-                    appearance="subtle"
-                    icon={<EraserRegular />}
-                    aria-label={`Remove stale ${rule.marker} markers for #${rule.spelling}`}
-                    disabled={rule.staleTaskCount === 0 || changeInFlight || busy}
-                    onClick={() => onRemoveOne(rule)}
-                  />
-                </Tooltip>
+                {!narrow && (
+                  <>
+                    <Tooltip content="Apply this marker" relationship="label">
+                      <Button
+                        appearance="subtle"
+                        icon={<PlayRegular />}
+                        aria-label={`Apply the marker for #${rule.spelling}`}
+                        disabled={changeInFlight || busy}
+                        onClick={() => onApplyOne(rule)}
+                      />
+                    </Tooltip>
+                    <Tooltip
+                      content={
+                        rule.staleTaskCount === 0
+                          ? `No task carries ${rule.marker} without #${rule.spelling}.`
+                          : `Take ${rule.marker} off the tasks that no longer carry #${rule.spelling}.`
+                      }
+                      relationship="label"
+                    >
+                      <Button
+                        appearance="subtle"
+                        icon={<EraserRegular />}
+                        aria-label={`Remove stale ${rule.marker} markers for #${rule.spelling}`}
+                        disabled={rule.staleTaskCount === 0 || changeInFlight || busy}
+                        onClick={() => onRemoveOne(rule)}
+                      />
+                    </Tooltip>
+                  </>
+                )}
                 <Tooltip content="Delete rule" relationship="label">
                   <Button
                     appearance="subtle"
@@ -344,15 +383,17 @@ export function MarkerRulesPanel({
                 rule
               </Text>
 
-              <Tooltip content={`Take ${marker.marker} off those tasks.`} relationship="label">
-                <Button
-                  appearance="subtle"
-                  icon={<EraserRegular />}
-                  aria-label={`Remove the ${marker.marker} markers left behind`}
-                  disabled={changeInFlight || busy}
-                  onClick={() => onRemoveAbandoned(marker)}
-                />
-              </Tooltip>
+              {!narrow && (
+                <Tooltip content={`Take ${marker.marker} off those tasks.`} relationship="label">
+                  <Button
+                    appearance="subtle"
+                    icon={<EraserRegular />}
+                    aria-label={`Remove the ${marker.marker} markers left behind`}
+                    disabled={changeInFlight || busy}
+                    onClick={() => onRemoveAbandoned(marker)}
+                  />
+                </Tooltip>
+              )}
             </div>
           ))}
         </div>

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FluentProvider } from '@fluentui/react-components';
 import { Workbench } from './Workbench';
@@ -125,6 +125,32 @@ describe('Workbench', () => {
   });
 
   /**
+   * A phone gets the hashtags as a list it can read, and a marker can be set from it: a rule writes
+   * no task. Renaming and combining are confirmed from a preview of every title, which needs a
+   * wider screen, so the panel that starts them is not there and a sentence says where it is.
+   */
+  it('on a phone lists the hashtags, sets a marker, and leaves renaming to a wider screen', async () => {
+    stubNarrowScreen();
+    show();
+
+    const list = await screen.findByRole('list', { name: 'Hashtags' });
+
+    expect(within(list).getByText('#Prio1')).toBeTruthy();
+    expect(screen.queryByRole('grid')).toBeNull();
+    expect(screen.queryByRole('complementary', { name: /hashtag details/i })).toBeNull();
+    expect(screen.getByText(/renaming and combining hashtags needs a desktop or laptop screen/i)).toBeTruthy();
+
+    fireEvent.click(within(list).getByRole('button', { name: /^marker for #prio1$/i }));
+
+    const box = await screen.findByRole('textbox');
+    fireEvent.change(box, { target: { value: '🍞' } });
+    fireEvent.click(screen.getByRole('button', { name: /save marker/i }));
+
+    expect(await within(list).findByText('🍞')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /apply all markers/i })).toBeNull();
+  });
+
+  /**
    * The running Change's panel leaves the moment it ends. How it ended — and, for a failure that
    * needs a fresh sign-in, the way out — is said where the person watched it run, not only in the
    * history below the table.
@@ -149,6 +175,16 @@ describe('Workbench', () => {
 });
 
 /** A server that answers the four reads the page makes, with the inventory answer holdable. */
+/** A screen as narrow as a phone's. jsdom has no `matchMedia`, which the page reads as a wide one. */
+function stubNarrowScreen() {
+  vi.stubGlobal('matchMedia', (media: string) => ({
+    media,
+    matches: true,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+}
+
 function show({
   inventory: first = inventory([row(), row({ key: 'KUNDE', canonicalSpelling: 'kunde' })]),
   queue: initialQueue = { active: null, history: [] },
