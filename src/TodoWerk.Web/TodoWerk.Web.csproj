@@ -51,6 +51,22 @@
     <None Include="$(SpaRoot)**" Exclude="$(SpaRoot)node_modules\**" />
   </ItemGroup>
 
+  <!--
+    The date of the commit this build is made from, for the About Page's build line
+    (Diagnostics/BuildVersion.cs). The commit's date rather than the clock's: the same commit built
+    twice is the same build, and Deterministic stays true. Outside a git working tree, or without
+    git, there is no date to stamp and the attribute is left out, as the commit already is.
+  -->
+  <Target Name="StampCommitDate" BeforeTargets="GetAssemblyAttributes">
+    <Exec Command="git log -1 --format=%%cI" ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low" IgnoreExitCode="true" ContinueOnError="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="CommitDate" />
+      <Output TaskParameter="ExitCode" PropertyName="CommitDateExitCode" />
+    </Exec>
+    <ItemGroup Condition="'$(CommitDateExitCode)' == '0' and '$(CommitDate)' != ''">
+      <AssemblyMetadata Include="CommitDate" Value="$(CommitDate)" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="EnsureNodeModules" BeforeTargets="BuildClient">
     <Exec WorkingDirectory="$(SpaRoot)" Command="npm ci" />
   </Target>

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using TodoWerk.Application.Changes;
 using TodoWerk.Application.Onboarding;
 using TodoWerk.Infrastructure.Indexing;
+using TodoWerk.Web.Diagnostics;
 using TodoWerk.Web.Documents;
 using TodoWerk.Web.Legal;
 
@@ -44,6 +45,9 @@ internal sealed class HandbookPages(
     /// <summary>Where the two files live in the repository, so their relative links resolve from there.</summary>
     private const string SourceDirectory = "handbook/";
 
+    /// <summary>Where a commit of the public repository is shown, ending where the full sha goes.</summary>
+    private const string CommitUrl = "https://github.com/Cloudwerk/todowerk/commit/";
+
     /// <summary>
     /// Named one by one rather than as a prefix, for the reason <see cref="LegalPages.Hosts"/>
     /// gives: everything else is the SPA's, and wants its antiforgery token.
@@ -67,7 +71,8 @@ internal sealed class HandbookPages(
             .Replace("{{HandbookLinks}}", HandbookLinks(handbook), StringComparison.Ordinal)
             .Replace("{{OperatorLinks}}", OperatorLinks(legal, handbook), StringComparison.Ordinal)
             .Replace("{{Operator}}", legal.OperatorOrFallback, StringComparison.Ordinal)
-            .Replace("{{OperatorContact}}", DocumentPage.AsClickableContact(legal.OperatorContactOrFallback), StringComparison.Ordinal);
+            .Replace("{{OperatorContact}}", DocumentPage.AsClickableContact(legal.OperatorContactOrFallback), StringComparison.Ordinal)
+            .Replace("{{Build}}", BuildLine(BuildVersion.OfRunningApplication()), StringComparison.Ordinal);
 
         return DocumentPage.Render(markdown, SourceDirectory, nav, fallbackTitle: "About TodoWerk");
     }
@@ -90,6 +95,30 @@ internal sealed class HandbookPages(
             .Replace("{{IdleAfterDays}}", DocumentPage.Days(indexing.IdleAfter), StringComparison.Ordinal);
 
         return DocumentPage.Render(markdown, SourceDirectory, nav, fallbackTitle: "TodoWerk for administrators");
+    }
+
+    /// <summary>
+    /// Which build this page is served by: the commit, linked to the public repository, and the
+    /// commit's date. No version number, because the server has none it could state truthfully —
+    /// the number in a Store listing is the App Package's, raised for Teams' update rule, and the
+    /// server is redeployed independently of it. The commit is what <c>/version</c> reports and
+    /// what a bug report needs.
+    /// </summary>
+    internal static string BuildLine(BuildVersion build)
+    {
+        ArgumentNullException.ThrowIfNull(build);
+
+        if (build.Commit is not { } commit)
+        {
+            return "This installation was built outside a git working tree, so it cannot say which revision of TodoWerk it runs.";
+        }
+
+        var shortCommit = commit.Length > 7 ? commit[..7] : commit;
+        var line = $"This installation runs TodoWerk at commit [`{shortCommit}`]({CommitUrl}{commit})";
+
+        return build.CommitDate is { } date
+            ? $"{line}, of {date.ToString("d MMMM yyyy", CultureInfo.InvariantCulture)}."
+            : $"{line}.";
     }
 
     private static string Read(string resource) =>

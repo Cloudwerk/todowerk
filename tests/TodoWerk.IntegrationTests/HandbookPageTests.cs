@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.Testing;
+using TodoWerk.Web.Diagnostics;
+using TodoWerk.Web.Handbook;
 using Xunit;
 
 namespace TodoWerk.IntegrationTests;
@@ -145,6 +147,67 @@ public sealed class HandbookPageTests
         Assert.Contains("<blockquote>", page, StringComparison.Ordinal);
         Assert.Contains("<img src=\"data:image/png;base64,", page, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// The About Page names the build serving it, from the same assembly <c>/version</c> reads, so
+    /// somebody reporting a problem from the page can say which revision they saw. Every
+    /// placeholder is filled: a stray <c>{{</c> would be a sentence the page forgot to write.
+    /// </summary>
+    [Fact]
+    public async Task TheAboutPageNamesTheBuildServingIt()
+    {
+        var expected = BuildVersion.OfRunningApplication();
+
+        using var factory = new TodoWerkWebApplicationFactory().WithoutBackgroundWorkers();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var page = await client.GetStringAsync(About, TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain("{{", page, StringComparison.Ordinal);
+
+        if (expected.Commit is { } commit)
+        {
+            Assert.Contains($"https://github.com/Cloudwerk/todowerk/commit/{commit}", page, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Contains("cannot say which revision", page, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void TheBuildLineNamesTheShortCommitLinkedInFullAndTheCommitsDate()
+    {
+        var line = HandbookPages.BuildLine(new BuildVersion(
+            "1.0.0",
+            "48ab6b45d55dbf40516b5ff83513ac2a674f5c3f",
+            new DateTimeOffset(2026, 10, 14, 10, 4, 15, TimeSpan.FromHours(2))));
+
+        Assert.Equal(
+            "This installation runs TodoWerk at commit [`48ab6b4`](https://github.com/Cloudwerk/todowerk/commit/48ab6b45d55dbf40516b5ff83513ac2a674f5c3f), of 14 October 2026.",
+            line);
+    }
+
+    /// <summary>A build git could not date still names its commit; one with no commit says so.</summary>
+    [Fact]
+    public void TheBuildLineSaysWhatItDoesNotKnow()
+    {
+        Assert.Equal(
+            "This installation runs TodoWerk at commit [`48ab6b4`](https://github.com/Cloudwerk/todowerk/commit/48ab6b4).",
+            HandbookPages.BuildLine(new BuildVersion("1.0.0", "48ab6b4")));
+        Assert.Contains(
+            "cannot say which revision",
+            HandbookPages.BuildLine(new BuildVersion(BuildVersion.Unknown, null)),
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>A date git did not print is no date rather than a failure.</summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("not a date")]
+    public void AnUnreadableCommitDateIsNoDate(string? stamped) =>
+        Assert.Null(BuildVersion.ParseCommitDate(stamped));
 
     /// <summary>The nav a served page carries, in the order it carries it: text and address per entry.</summary>
     private static List<(string Text, string Href)> NavOf(string page)
