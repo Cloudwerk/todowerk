@@ -32,7 +32,8 @@ version. See [docs/status.md](status.md) for what works today.
 - The invitation to approve TodoWerk for the organisation now says what is on the page for administrators before you open it.
 - If nobody approved TodoWerk when you signed in, the screen now says so and offers to have it approved for your whole organisation — without needing you to sign in first, which you cannot do until somebody has.
 - The help control opens before you sign in, so the page about TodoWerk and the page for administrators can be reached from the screen TodoWerk shows before sign-in. That is where an administrator who is deciding whether to allow it arrives, and they may never sign in at all.
-- The page about TodoWerk now names the build it is served by: the commit, linked to the public repository, and the date of that commit.
+- The page about TodoWerk now names the build it is served by: its version, the commit, linked to the public repository, and the date of that commit.
+- `/version` reports a real version: the release tag the build was made from, or a pre-release of the next version for a build between releases. It used to report 1.0.0 for every build.
 - A deployment now says at `/version`, to anybody who asks, whether it checks licences at all or lets everybody in, so whoever runs it can see from outside that it is running the way it was promised to.
 - When a scan finds no hashtag in any task, the Workbench now says how to write one into a task title in Microsoft To Do and what a hashtag buys you there, and offers the next scan from the same place.
 - On a phone, in Microsoft Teams, Outlook, the Microsoft 365 app or a browser, the Workbench lists your hashtags one to a row, with their counts and notes, and you can search and filter them, set a marker, see your recent changes and undo one. Renaming, combining, and applying or removing markers say where they are instead: on a desktop or laptop screen, where the preview of every title fits.

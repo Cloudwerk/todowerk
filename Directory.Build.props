@@ -14,6 +14,17 @@
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
+  <!--
+    The version is the release tag, read by MinVer at build time: a commit tagged `v1.0.3` builds
+    as 1.0.3, and a commit after it as a pre-release of the next patch (1.0.4-alpha.0.<height>),
+    so nothing built after a release claims to be it. Nobody edits a number here. A build outside a
+    git working tree, or from a clone without tags, falls back to 0.0.0-alpha.0. Releasing is
+    `git tag v<version>` on main and pushing the tag; CI then rebuilds the image with it.
+  -->
+  <PropertyGroup>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+  </PropertyGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>latest</LangVersion>

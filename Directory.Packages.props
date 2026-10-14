@@ -9,6 +9,14 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
+    <!--
+      Every project's version comes from the nearest `v<major>.<minor>.<patch>` git tag
+      (Directory.Build.props). Global, because a version is a property of the whole build, and
+      build-time only: MinVer ships nothing into the output.
+    -->
+    <GlobalPackageReference Include="MinVer" Version="8.0.0" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageVersion Include="Markdig" Version="1.4.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.1.1" />
