@@ -5,8 +5,9 @@ namespace TodoWerk.Domain.Licensing;
 /// record: TodoWerk holds no Licence and no licence key, only the most recent answer for one
 /// person in one tenant ([ADR-0001](../../../docs/adr/0001-single-entitlement-authority.md)).
 /// <para>
-/// The purchase URL is deliberately not here. It says where <em>the portal</em> sells TodoWerk,
-/// which is the same address for everybody and is delivered on a refusal too — where there is no
+/// The purchase URL is deliberately not here. It says where TodoWerk is bought (the portal's own
+/// page, or a listing CloudWerk names for the solution such as a Microsoft Marketplace one), which
+/// is the same address for everybody and is delivered on a refusal too — where there is no
 /// Licence at all — so it belongs to the answer rather than to what was found. It is on
 /// <see cref="LicenceResolution"/>.
 /// </para>
