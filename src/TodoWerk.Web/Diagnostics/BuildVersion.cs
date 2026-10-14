@@ -10,9 +10,10 @@ namespace TodoWerk.Web.Diagnostics;
 /// yesterday" are indistinguishable from outside.
 /// <para>
 /// Read from the assembly rather than from configuration: a version somebody has to remember to set
-/// is a version that is eventually wrong. The compiler already stamps this one — .NET appends the
-/// source revision to <see cref="AssemblyInformationalVersionAttribute"/>, giving the
-/// <c>1.0.0+&lt;commit&gt;</c> form — so nothing in the build has to know this type exists.
+/// is a version that is eventually wrong. The build already stamps this one: MinVer sets the version
+/// from the nearest release tag (Directory.Build.props), and .NET appends the source revision to
+/// <see cref="AssemblyInformationalVersionAttribute"/>, giving the <c>1.0.3+&lt;commit&gt;</c> form —
+/// so nothing in the build has to know this type exists.
 /// </para>
 /// <para>
 /// The commit's date comes from the same place by a different route: <c>TodoWerk.Web.csproj</c>

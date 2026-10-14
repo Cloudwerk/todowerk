@@ -14,11 +14,12 @@ have, and changes them when you say so. It is in early development, and M0 to M5
 - ⚠️ Two cells of that walk could not be performed: Teams on the web in Safari, and the
   first-ever user of a tenant that has not granted Tenant Consent. Read every sentence about
   those two as a claim about code.
-- 📦 There is no release and nothing supported to install. CI publishes a container image to
-  GitHub's registry on every push to `main`, but it is a build artefact: undocumented, with no
-  version number anybody has promised anything about, until M6 packages self-hosting properly.
-  Every image is tagged `sha-<commit>` as well as `latest`, and a running deployment names its
-  commit at `/version`.
+- 📦 Nothing supported to install yet. CI publishes a container image to GitHub's registry on
+  every push to `main`, tagged `sha-<commit>` and `latest`; that is a build artefact, undocumented
+  until M6 packages self-hosting properly. A release is a `v<version>` git tag on `main`: its push
+  rebuilds the image with the version stamped and tags it with that version. A build between
+  releases names itself a pre-release of the next one. A running deployment names its version and
+  commit at `/version` and on its About page.
 
 ## What works today
 

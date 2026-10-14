@@ -5,6 +5,9 @@ on:
     branches: [main]
   push:
     branches: [main]
+    # A release is a `v<version>` tag on main. Its push rebuilds the image with that version
+    # stamped (Directory.Build.props), and tags the image with it.
+    tags: ['v*']
 
 permissions:
   contents: read
@@ -45,7 +48,11 @@ jobs:
           --health-start-period 30s
 
     steps:
+      # Whole history and tags: MinVer derives the version from the nearest `v` tag, and a
+      # shallow clone has neither.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -107,7 +114,9 @@ jobs:
     # TodoWerk.Web.csproj), so Node is set up but no explicit npm steps are needed.
     name: Publish container image
     needs: build-and-test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      github.event_name == 'push'
+      && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
 
     permissions:
@@ -115,7 +124,11 @@ jobs:
       packages: write
 
     steps:
+      # Whole history and tags: MinVer derives the version from the nearest `v` tag, and a
+      # shallow clone has neither.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -136,12 +149,28 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # A push to main moves `latest`. A release tag adds the version instead and leaves `latest`
+      # alone, because the tag may name an older commit than main's head. Both rewrite
+      # `sha-<commit>`, which for a tagged commit is the same code, now stamped with its version.
+      - name: Choose image tags
+        id: tags
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ "$REF_TYPE" = "tag" ]; then
+            echo "value=sha-$SHA;${REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=latest;sha-$SHA" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish image
         run: >-
           dotnet publish src/TodoWerk.Web -c Release /t:PublishContainer
           -p:ContainerRegistry=ghcr.io
           -p:ContainerRepository=cloudwerk/todowerk
-          -p:ContainerImageTags='"latest;sha-${{ github.sha }}"'
+          -p:ContainerImageTags='"${{ steps.tags.outputs.value }}"'
 
   migration-check:
     # A new EF migration changes the shape of a live database; it should never land unnoticed.

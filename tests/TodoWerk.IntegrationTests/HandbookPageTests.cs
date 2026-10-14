@@ -176,25 +176,31 @@ public sealed class HandbookPageTests
     }
 
     [Fact]
-    public void TheBuildLineNamesTheShortCommitLinkedInFullAndTheCommitsDate()
+    public void TheBuildLineNamesTheVersionTheShortCommitLinkedInFullAndTheCommitsDate()
     {
         var line = HandbookPages.BuildLine(new BuildVersion(
-            "1.0.0",
+            "1.0.3",
             "48ab6b45d55dbf40516b5ff83513ac2a674f5c3f",
             new DateTimeOffset(2026, 10, 14, 10, 4, 15, TimeSpan.FromHours(2))));
 
         Assert.Equal(
-            "This installation runs TodoWerk at commit [`48ab6b4`](https://github.com/Cloudwerk/todowerk/commit/48ab6b45d55dbf40516b5ff83513ac2a674f5c3f), of 14 October 2026.",
+            "This installation runs TodoWerk 1.0.3 at commit [`48ab6b4`](https://github.com/Cloudwerk/todowerk/commit/48ab6b45d55dbf40516b5ff83513ac2a674f5c3f), of 14 October 2026.",
             line);
     }
 
-    /// <summary>A build git could not date still names its commit; one with no commit says so.</summary>
+    /// <summary>
+    /// A build git could not date still names its commit, one with no version names no version, and
+    /// one with no commit says so.
+    /// </summary>
     [Fact]
     public void TheBuildLineSaysWhatItDoesNotKnow()
     {
         Assert.Equal(
+            "This installation runs TodoWerk 1.0.4-alpha.0.3 at commit [`48ab6b4`](https://github.com/Cloudwerk/todowerk/commit/48ab6b4).",
+            HandbookPages.BuildLine(new BuildVersion("1.0.4-alpha.0.3", "48ab6b4")));
+        Assert.Equal(
             "This installation runs TodoWerk at commit [`48ab6b4`](https://github.com/Cloudwerk/todowerk/commit/48ab6b4).",
-            HandbookPages.BuildLine(new BuildVersion("1.0.0", "48ab6b4")));
+            HandbookPages.BuildLine(new BuildVersion(BuildVersion.Unknown, "48ab6b4")));
         Assert.Contains(
             "cannot say which revision",
             HandbookPages.BuildLine(new BuildVersion(BuildVersion.Unknown, null)),

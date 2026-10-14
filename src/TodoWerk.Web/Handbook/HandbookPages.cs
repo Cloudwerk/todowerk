@@ -98,11 +98,10 @@ internal sealed class HandbookPages(
     }
 
     /// <summary>
-    /// Which build this page is served by: the commit, linked to the public repository, and the
-    /// commit's date. No version number, because the server has none it could state truthfully —
-    /// the number in a Store listing is the App Package's, raised for Teams' update rule, and the
-    /// server is redeployed independently of it. The commit is what <c>/version</c> reports and
-    /// what a bug report needs.
+    /// Which build this page is served by: the version, the commit linked to the public repository,
+    /// and the commit's date — what <c>/version</c> reports, and what a bug report needs. The version
+    /// is the release tag the build was made from (Directory.Build.props), so a build after a release
+    /// names itself a pre-release of the next one rather than the release.
     /// </summary>
     internal static string BuildLine(BuildVersion build)
     {
@@ -114,7 +113,8 @@ internal sealed class HandbookPages(
         }
 
         var shortCommit = commit.Length > 7 ? commit[..7] : commit;
-        var line = $"This installation runs TodoWerk at commit [`{shortCommit}`]({CommitUrl}{commit})";
+        var version = build.Version == BuildVersion.Unknown ? string.Empty : $" {build.Version}";
+        var line = $"This installation runs TodoWerk{version} at commit [`{shortCommit}`]({CommitUrl}{commit})";
 
         return build.CommitDate is { } date
             ? $"{line}, of {date.ToString("d MMMM yyyy", CultureInfo.InvariantCulture)}."

@@ -227,6 +227,17 @@ read what they mean before you change them:
 
 Branch from `main`. There is no long-lived develop branch and no release branches.
 
+A release is a tag on `main`, `v<major>.<minor>.<patch>`, and nothing else: nobody edits a version
+number. The build reads the nearest tag (MinVer, configured in `Directory.Build.props`), so a
+tagged commit builds as that version and every commit after it as a pre-release of the next one.
+Pushing the tag makes CI rebuild that commit's container image with the version stamped and tag the
+image with it. `/version` and the About page then name the version.
+
+```bash
+git tag v1.0.3
+git push origin v1.0.3
+```
+
 Name branches for what they do, with the same prefix you will use in the commit:
 `feat/hashtag-inventory`, `fix/antiforgery-ordering`, `docs/adr-0005`.
 
