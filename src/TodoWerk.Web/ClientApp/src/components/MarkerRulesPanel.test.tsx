@@ -197,6 +197,30 @@ describe('MarkerRulesPanel', () => {
     expect(screen.getByText(/no markers yet/i)).toBeTruthy();
   });
 
+  /**
+   * On a phone, applying and removing would open a preview of every title that does not fit the
+   * screen, so their buttons give way to a sentence saying where they are. A rule itself writes no
+   * task, so making, ordering and deleting one stays.
+   */
+  it('on a phone offers the rules but leaves applying and removing to a wider screen', () => {
+    show({
+      rules: [rule({ staleTaskCount: 2 }), rule({ id: 'r2', spelling: 'coffee', marker: '☕' })],
+      abandoned: [abandoned()],
+      narrow: true,
+    });
+
+    expect(screen.getByText(/applying and removing markers needs a desktop or laptop screen/i)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /apply all markers/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /remove stale markers/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^apply the marker for/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^remove stale .* markers for/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /markers left behind/i })).toBeNull();
+
+    expect(button('Change the marker for #bread')).toBeTruthy();
+    expect(button('Move #coffee up')).toBeTruthy();
+    expect(button('Delete the marker rule for #bread')).toBeTruthy();
+  });
+
   function button(name: string | RegExp): HTMLButtonElement {
     return screen.getByRole('button', { name }) as HTMLButtonElement;
   }

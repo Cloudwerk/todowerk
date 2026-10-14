@@ -9,7 +9,6 @@ import {
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { DesktopRegular } from '@fluentui/react-icons';
 import { teamsConsentUrl } from '../api/client';
 import { OpenInBrowserButton } from '../components/OpenInBrowserButton';
 import { teamsAuthEndPath, useTeamsHost } from '../host';
@@ -33,10 +32,6 @@ const useStyles = makeStyles({
     alignItems: 'center',
     gap: tokens.spacingHorizontalM,
     flexWrap: 'wrap',
-  },
-  deviceIcon: {
-    fontSize: '32px',
-    color: tokens.colorBrandForeground1,
   },
 });
 
@@ -217,30 +212,6 @@ export function OutsideTeamsCard() {
       <div className={styles.actions}>
         <OpenInBrowserButton />
       </div>
-    </Frame>
-  );
-}
-
-/**
- * What a phone gets instead of the Workbench. The hashtag workbench is a wide table with a detail
- * panel beside it, and at phone width it is a horizontal scroll over columns nobody can read. A
- * capability the device cannot carry says so instead of dead-ending, and this is the saying so.
- * No sign-in happens first: there is nothing to sign in for.
- * No way out to a browser either — the same workbench on the same phone would be no better.
- */
-export function SmallScreenCard() {
-  const styles = useStyles();
-
-  return (
-    <Frame>
-      <DesktopRegular className={styles.deviceIcon} aria-hidden />
-      <Title2 as="h1">TodoWerk needs a desktop or laptop screen</Title2>
-      <Body1>
-        The hashtag workbench is a wide table with a panel beside it, and it does not fit on a
-        phone. Open TodoWerk in Microsoft Teams, Outlook or the Microsoft 365 app on your computer,
-        or in a browser there, signed in with the same account.
-      </Body1>
-      <Caption1>Your tasks and hashtags are untouched. Nothing on this screen changes them.</Caption1>
     </Frame>
   );
 }

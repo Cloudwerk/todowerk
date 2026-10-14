@@ -1,5 +1,6 @@
 import { Fragment, useRef, useState } from 'react';
 import {
+  Avatar,
   Menu,
   MenuButton,
   MenuDivider,
@@ -25,6 +26,7 @@ import { HandbookMenuItem } from './components/HandbookLink';
 import { LicenceDeniedCard } from './components/LicenceDeniedCard';
 import { useOpenInBrowser } from './components/OpenInBrowserButton';
 import { SignOutForm } from './components/SignOutForm';
+import { narrowScreenQuery, useNarrowScreen } from './hooks/useNarrowScreen';
 import { useTeamsHost } from './host';
 import { LicenceProvider, useLicence } from './licence';
 
@@ -41,6 +43,11 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalS,
     padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalXXL}`,
     backgroundColor: tokens.colorBrandBackground,
+    flexWrap: 'wrap',
+    [`@media ${narrowScreenQuery}`]: {
+      paddingInline: tokens.spacingHorizontalL,
+      rowGap: tokens.spacingVerticalS,
+    },
   },
   title: {
     color: tokens.colorNeutralForegroundOnBrand,
@@ -49,12 +56,30 @@ const useStyles = makeStyles({
   // colour the contrast suite cannot see.
   subtitle: {
     color: tokens.colorNeutralForegroundOnBrand,
+    // A phone has room for the name or the name and what it is, and the name is the one a person
+    // looks for.
+    [`@media ${narrowScreenQuery}`]: {
+      display: 'none',
+    },
   },
   nav: {
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalL,
     marginInlineStart: tokens.spacingHorizontalL,
+  },
+  // Inside a host the nav is the first thing in the bar and keeps its row. Beside the name, on a
+  // phone, it moves to a row of its own under the name and the session controls, rather than
+  // wrapping wherever the widths happen to break.
+  navBesideTitle: {
+    [`@media ${narrowScreenQuery}`]: {
+      order: 1,
+      flexBasis: '100%',
+      marginInlineStart: 0,
+    },
+  },
+  navFirst: {
+    marginInlineStart: 0,
   },
   // On the anchor itself, not on a wrapper: `NavLink` renders the `<a>`, and a class on something
   // around it leaves the browser's own link colours in charge — blue on the brand header, purple
@@ -105,6 +130,10 @@ const useStyles = makeStyles({
   main: {
     flexGrow: 1,
     padding: tokens.spacingHorizontalXXL,
+    // A phone's width is better spent on the hashtags than on the margin around them.
+    [`@media ${narrowScreenQuery}`]: {
+      padding: tokens.spacingHorizontalM,
+    },
   },
   // Wrapped, and given a measure: a Fluent menu grows to its longest item, and a two-line sentence
   // here would otherwise stretch the menu to the width of the sentence.
@@ -159,7 +188,7 @@ function Shell() {
           </>
         )}
         {user.status === 'ready' && (
-          <nav className={styles.nav}>
+          <nav className={`${styles.nav} ${inTeams ? styles.navFirst : styles.navBesideTitle}`}>
             {/* Named by what the screen shows. "Workbench" is CONTEXT.md's word for the screen,
                 and a person using it never needs it. */}
             <NavLink to="/" className={navLinkClass(styles)} end>
@@ -282,6 +311,9 @@ function HelpMenu({ documents }: { documents: HandbookDocument[] }) {
  */
 function SessionMenu({ displayName, inTeams }: { displayName: string; inTeams: boolean }) {
   const styles = useStyles();
+  // On a phone the name gives way to its initials, so the bar keeps one row; the menu says whose
+  // they are.
+  const narrow = useNarrowScreen();
   const signOutForm = useRef<HTMLFormElement>(null);
   const openInBrowser = useOpenInBrowser();
   const [erasing, setErasing] = useState(false);
@@ -290,12 +322,28 @@ function SessionMenu({ displayName, inTeams }: { displayName: string; inTeams: b
     <>
       <Menu positioning="below-end">
         <MenuTrigger disableButtonEnhancement>
-          <MenuButton appearance="transparent" className={styles.headerButton}>
-            {displayName}
-          </MenuButton>
+          {narrow ? (
+            <MenuButton
+              appearance="transparent"
+              className={styles.headerButton}
+              icon={<Avatar name={displayName} size={28} color="neutral" aria-hidden />}
+              menuIcon={null}
+              aria-label={`Account menu for ${displayName}`}
+            />
+          ) : (
+            <MenuButton appearance="transparent" className={styles.headerButton}>
+              {displayName}
+            </MenuButton>
+          )}
         </MenuTrigger>
         <MenuPopover>
           <MenuList>
+            {narrow && (
+              <>
+                <MenuGroupHeader className={styles.signedInNote}>{displayName}</MenuGroupHeader>
+                <MenuDivider />
+              </>
+            )}
             {inTeams ? (
               <MenuGroup>
                 <MenuGroupHeader className={styles.signedInNote}>

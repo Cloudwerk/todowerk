@@ -251,7 +251,7 @@ export const HashtagInventoryTable = memo(function HashtagInventoryTable({
  * What the marker button says it is for, and — where there is a rule — how far it has got. The
  * figure is as fresh as the last scan, which the freshness chrome above the table already says.
  */
-function markerTooltip(rule: MarkerRule | undefined): string {
+export function markerTooltip(rule: MarkerRule | undefined): string {
   if (!rule) return 'Give this hashtag a marker';
 
   return rule.taggedTaskCount === 0
@@ -269,7 +269,7 @@ function markerTooltip(rule: MarkerRule | undefined): string {
  * to the badge as its accessible description, reachable by keyboard focus, and works on touch —
  * three things a `title` attribute does not do.
  */
-function Flags({ row, className }: { row: HashtagInventoryRow; className: string }) {
+export function Flags({ row, className }: { row: HashtagInventoryRow; className: string }) {
   return (
     <div className={className}>
       {row.hasMultipleSpellings && (

@@ -118,6 +118,12 @@ analyzer warning as an error.
   the ordinary `todowerk.session` cookie, with the same eight hours
   ([ADR-0010](adr/0010-teams-tab-session-and-framing.md)). No token reaches the client on any
   path, as [ADR-0002](adr/0002-backend-held-tokens.md) said from M0.
+- 💬 The phone layout. Below 640 px the Workbench lists the hashtags instead of the table and
+  offers what writes no task: search, filter, set a marker, recent changes and undo. Renaming,
+  combining and applying or removing markers name a desktop or laptop screen instead, because
+  their preview of every title does not fit. Checked at 390 px in a browser against a stubbed
+  server; not yet walked on a real phone in any host, and Teams on iOS has never been walked at
+  all.
 - 🤝 When the exchange fails. In a tenant without Tenant Consent the exchange cannot succeed;
   that is the expected first run. It comes back as its own problem code, and the tab renders an
   explanatory card with a button, never an automatic popup. The button runs the existing

@@ -3,8 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { FluentProvider } from '@fluentui/react-components';
 import { app, authentication } from '@microsoft/teams-js';
 import type { TeamsHost } from '../host';
-import { OutsideTeamsCard, SmallScreenCard } from './TabCards';
-import { needsDesktopScreen } from './screen';
+import { OutsideTeamsCard } from './TabCards';
 import { TeamsApp } from './TeamsApp';
 import { teamsThemeFor, themeFromSearch } from './theme';
 
@@ -47,22 +46,8 @@ async function start() {
   const context = await app.getContext().catch(() => null);
   const theme = themeFromSearch(window.location.search) ?? asThemeName(context?.app.theme);
 
-  // A phone is told so before anything signs in. A capability not carried on mobile gets a
-  // graceful answer there, and the Workbench is not carried: its table is unreadable at phone
-  // width, and no sign-in would improve that.
-  if (needsDesktopScreen(context?.app.host.clientType)) {
-    root.render(
-      <StrictMode>
-        <FluentProvider theme={teamsThemeFor(theme)}>
-          <SmallScreenCard />
-        </FluentProvider>
-      </StrictMode>,
-    );
-    app.notifySuccess();
-
-    return;
-  }
-
+  // A phone gets the same tab: the Workbench lays itself out for the screen it is on, and says
+  // there what needs a wider one (`useNarrowScreen`).
   root.render(
     <StrictMode>
       <TeamsApp
