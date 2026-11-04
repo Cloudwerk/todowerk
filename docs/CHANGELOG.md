@@ -39,6 +39,9 @@ version. See [docs/status.md](status.md) for what works today.
 - On a phone, in Microsoft Teams, Outlook, the Microsoft 365 app or a browser, the Workbench lists your hashtags one to a row, with their counts and notes, and you can search and filter them, set a marker, see your recent changes and undo one. Renaming, combining, and applying or removing markers say where they are instead: on a desktop or laptop screen, where the preview of every title fits.
 - Inside a host, the menu under your name now says where sign-out lives: signing out of Microsoft Teams, Outlook or the Microsoft 365 app signs you out of TodoWerk too.
 - Every link that leaves the tab for your browser carries a pop-out glyph, so you can tell before you select it.
+- When your organisation does not let you approve TodoWerk yourself, the Teams tab gives you a link to copy for your administrator. They open it with their administrator account, approve TodoWerk once for everyone, and TodoWerk records it, even though they never sign in to TodoWerk ([ADR-0015](adr/0015-an-approval-link-carries-its-tenant.md)).
+- Both consent screens say that an approval can be withdrawn, and link to how.
+- The page for administrators explains what `offline_access` adds, what happens in the hour after permissions are removed, where a person withdraws their own consent, and why approving through the ordinary sign-in prompt can approve only the administrator.
 
 ### Changed
 
