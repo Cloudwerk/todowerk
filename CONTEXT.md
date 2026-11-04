@@ -79,6 +79,10 @@ _Avoid_: Teams app (that is the App Package), Teams channel tab, Teams integrati
 An administrator approving TodoWerk's delegated permission grant on behalf of everyone in the tenant, so nobody is asked to consent at sign-in. It changes who is prompted and nothing else: TodoWerk still acts as each user with that user's own token, and still reaches no mailbox whose owner has not signed in.
 _Avoid_: admin consent (ambiguous with consent to app-only permissions, which TodoWerk does not use), Org Mode, tenant mode
 
+**Approval Link**:
+The address somebody whose own approval was refused in the Teams Tab hands to an administrator, so that the administrator can grant Tenant Consent for that person's tenant without ever signing in to TodoWerk. It names the tenant it is for, it lasts a week, and an approval made through it is recorded exactly as one made from inside TodoWerk. Offered whatever the person's Licence, because the person it is for has no session yet and so no Licence has been asked about. There is none in the browser, where a refused sign-in leaves TodoWerk no way to know whose tenant it was.
+_Avoid_: admin consent link, invitation link
+
 **Tenant Member**:
 The record that a person has used TodoWerk: their tenant, their Entra object id, when they first signed in and when they last did. Written only when a human signs in, because a scan running on a timer is not somebody using the product. Holds no name, no address, no history: a first and a last, and nothing between them.
 _Avoid_: user (TodoWerk keeps no user profile), sign-in log, activity record (it records no activity, only two moments)
@@ -88,7 +92,7 @@ A person with no interactive sign-in inside `Indexing:IdleAfter` (fourteen days 
 _Avoid_: dormant (a person the sweep will erase — ADR-0009), stale (a Hashtag, or the index — ADR-0003), inactive, away
 
 **Tenant Overview**:
-What a tenant is shown about its own use of TodoWerk: how many of its people have signed in, how recently, and how many Occurrences they hold between them. Counts only — it never names a person, never shows a per-person row, and never compares one person's Hashtags with another's. Visible to any signed-in user of the tenant, and suppressed entirely while too few have signed in for a total to be uninformative about individuals. It also names the reader's own Licence: the kind and the end date, and never a seat count, which is the one figure the floor above would have to protect twice. The invitation to grant Tenant Consent is a separate panel with two conditions: it shows until a grant is recorded, and only where the Licence permits it (under a Tenant Licence or a Trial, never under a Personal Licence, unchanged on a Self-Host). It is silent about grants made outside TodoWerk, which it cannot see.
+What a tenant is shown about its own use of TodoWerk: how many of its people have signed in, how recently, and how many Occurrences they hold between them. Counts only — it never names a person, never shows a per-person row, and never compares one person's Hashtags with another's. Visible to any signed-in user of the tenant, and suppressed entirely while too few have signed in for a total to be uninformative about individuals. It also names the reader's own Licence: the kind and the end date, and never a seat count, which is the one figure the floor above would have to protect twice. The invitation to grant Tenant Consent is a separate panel with two conditions: it shows until a grant is recorded, and only where the Licence permits it (under a Tenant Licence or a Trial, never under a Personal Licence, unchanged on a Self-Host). The Licence condition does not reach the Approval Link, which is offered regardless of Licence because the person it is for has no session yet. It is silent about grants made outside TodoWerk, which it cannot see.
 _Avoid_: admin dashboard (it is not restricted to admins), org inventory (it holds no Hashtags), Org Mode
 
 **CloudWerk**:
