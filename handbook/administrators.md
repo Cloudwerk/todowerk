@@ -29,6 +29,14 @@ it come the OpenID Connect scopes every sign-in needs: `openid`, `profile` and `
 There is no read-only mode. The background worker that performs a confirmed change has no browser to
 prompt through, so the write scope is asked for once, at sign-in, of everybody.
 
+Microsoft's consent screen shows `offline_access` as *Maintain access to data you have given it
+access to*, which reads like a second permission. It is not one. It reaches no data of its own, and
+Microsoft grants it implicitly with any delegated permission
+([Microsoft's description](https://learn.microsoft.com/entra/identity-platform/scopes-oidc#offline_access)).
+What it adds is a refresh token. TodoWerk uses it to keep the index current in the background and to
+perform a confirmed change after the browser is closed, without asking the person to sign in again
+every hour. The table below says how long that token is kept.
+
 *Delegated* is the word that matters. A delegated permission acts as the signed-in person, with a
 token issued to that person, and reaches only what that person can reach. TodoWerk takes **no
 application permission** of any kind.
@@ -58,6 +66,34 @@ looking at a different application.
 TodoWerk records that an approval was made *through its own page*. An approval made in the Microsoft
 Entra admin center instead is invisible to it. The invitation stays on screen, and approving there
 again is harmless.
+
+### When user consent is switched off
+
+In a tenant whose policy withholds user consent, everybody who opens TodoWerk is refused until an
+administrator approves it. The administrator is rarely the person who was refused, and often keeps a
+separate account for administration. The tab in Microsoft Teams, Outlook and the Microsoft 365 app is built for that.
+Below its **Approve and continue** button it offers **Copy link for your administrator**. The link
+leads to Microsoft's admin-consent page for exactly the permission above, for that person's
+organisation. An approval made through it is recorded like one made inside TodoWerk, so the
+invitation goes away for everybody.
+
+Open the link in a browser signed in with your administrator account. You do not sign in to
+TodoWerk, and your administrator account does not become a TodoWerk user. When Microsoft is done,
+TodoWerk says whether the approval landed, and there is nothing more to do there. The link works
+for {{ApprovalLinkDays}} days. After that it still leads to the approval, but TodoWerk can no longer
+tell which organisation it was for. It records nothing, and the invitation stays on screen as it
+does for an approval made in the admin center.
+
+Do not approve through the ordinary sign-in prompt with your administrator account. That is
+Microsoft's consent screen for one person. Its **Consent on behalf of your organization** checkbox
+is unticked by default, and Microsoft does not show it to Application Administrators or Cloud
+Application Administrators at all
+([Microsoft's description](https://learn.microsoft.com/entra/identity-platform/application-consent-experience)).
+Without that tick you have approved TodoWerk for your administrator account alone. Everybody else
+is still refused, and that account is now a TodoWerk user.
+
+The browser has no such link. A refused sign-in tells TodoWerk nothing about whose organisation it
+was, so the button on that screen starts an approval TodoWerk can report and cannot record.
 
 ## What TodoWerk stores about a person
 
@@ -129,7 +165,7 @@ There is deliberately no organisation-wide delete inside TodoWerk. A button that
 data on one person's authority is not something a hashtag manager should own. Revoking TodoWerk,
 below, reaches the same end.
 
-## Revoking TodoWerk
+## Revoking TodoWerk {#revoking}
 
 Remove TodoWerk's permissions in the Microsoft Entra admin center. They are under **Enterprise
 applications**, on TodoWerk's **Permissions** page. Deleting the enterprise application outright
@@ -138,6 +174,15 @@ everybody goes dormant, and the {{DormancyWindowDays}}-day rule above clears the
 on its own. There is no second action to take inside TodoWerk.
 
 If the data has to be gone sooner than that, ask CloudWerk: {{OperatorContact}}.
+
+"From that moment" has one exception. An access token Microsoft has already issued stays valid
+until it expires, about an hour after it was issued, and TodoWerk can use it until then. After that
+its refresh is refused, the background reading stops, and the next time somebody opens TodoWerk it
+asks them to reconnect, which means asking for approval again.
+
+Each person can also withdraw their own consent, at https://myapps.microsoft.com. That removes what
+they approved for themselves and nothing an administrator approved for the organisation. *Delete my
+data*, above, is how they have what TodoWerk holds about them destroyed as well.
 
 ## Making it available
 

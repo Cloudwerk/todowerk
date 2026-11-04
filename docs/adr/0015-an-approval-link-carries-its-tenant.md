@@ -23,7 +23,7 @@ because of it. An approval made that way was reported and never recorded, and th
 on screen for everybody in the organisation.
 
 The ordinary sign-in prompt is worse. An administrator who signs in to approve meets Microsoft's
-user consent screen, whose "Consent on behalf of your organisation" checkbox is unticked by default
+user consent screen, whose "Consent on behalf of your organization" checkbox is unticked by default
 and is not shown at all to Application and Cloud Application Administrators. Ticking nothing
 approves that one administration account and nobody else, and makes it a TodoWerk user.
 

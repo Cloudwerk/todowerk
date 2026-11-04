@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using TodoWerk.Application.Changes;
 using TodoWerk.Application.Onboarding;
 using TodoWerk.Infrastructure.Indexing;
+using TodoWerk.Infrastructure.Onboarding;
 using TodoWerk.Web.Diagnostics;
 using TodoWerk.Web.Documents;
 using TodoWerk.Web.Legal;
@@ -92,7 +93,10 @@ internal sealed class HandbookPages(
             .Replace("{{StatisticsFloor}}", onboarding.StatisticsFloor.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
             .Replace("{{ChangeRetentionDays}}", DocumentPage.Days(changes.ChangeRetention), StringComparison.Ordinal)
             .Replace("{{DormancyWindowDays}}", DocumentPage.Days(onboarding.DormancyWindow), StringComparison.Ordinal)
-            .Replace("{{IdleAfterDays}}", DocumentPage.Days(indexing.IdleAfter), StringComparison.Ordinal);
+            .Replace("{{IdleAfterDays}}", DocumentPage.Days(indexing.IdleAfter), StringComparison.Ordinal)
+            // A constant rather than a setting, read from where the code enforces it all the same,
+            // so the page and the link cannot disagree about when one stops being believed.
+            .Replace("{{ApprovalLinkDays}}", DocumentPage.Days(ApprovalLink.Lifetime), StringComparison.Ordinal);
 
         return DocumentPage.Render(markdown, SourceDirectory, nav, fallbackTitle: "TodoWerk for administrators");
     }

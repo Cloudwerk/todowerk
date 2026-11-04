@@ -68,6 +68,32 @@ public sealed class HandbookPageTests
     }
 
     /// <summary>
+    /// Both consent cards link to the section on withdrawing approval by its id, before anybody
+    /// approves anything. A heading that lost its attribute would still render, with the id printed
+    /// as text and every one of those links landing at the top of the page. The Approval Link's
+    /// lifetime is the one number on the page that is a constant rather than a setting, and it is
+    /// read from the code all the same.
+    /// </summary>
+    [Fact]
+    public async Task TheAdministratorsGuideCarriesTheSectionTheConsentCardsLinkTo()
+    {
+        using var factory = new TodoWerkWebApplicationFactory().WithoutBackgroundWorkers();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var page = await client.GetStringAsync(Administrators, TestContext.Current.CancellationToken);
+
+        Assert.Contains("<h2 id=\"revoking\">Revoking TodoWerk</h2>", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("{#revoking}", page, StringComparison.Ordinal);
+        var days = Infrastructure.Onboarding.ApprovalLink.Lifetime.TotalDays
+            .ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        Assert.Contains(
+            $"The link works for {days} days.",
+            Regex.Replace(page, @"\s+", " "),
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// The documents there are, in the order to offer them, said once. <c>GET /api/handbook</c> is
     /// where the shell's help menu gets its list, and the header of every served document is built
     /// from the same <c>DocumentNav</c> — so this reads the nav back out of a rendered page and
