@@ -3,14 +3,20 @@ import {
   Body1,
   Button,
   Caption1,
+  Caption1Strong,
   Card,
+  Divider,
+  Input,
   Spinner,
   Title2,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
-import { teamsConsentUrl } from '../api/client';
+import { CopyRegular } from '@fluentui/react-icons';
+import { teamsConsentUrl, tenantConsentUrl } from '../api/client';
+import { HandbookLink, administratorsPath } from '../components/HandbookLink';
 import { OpenInBrowserButton } from '../components/OpenInBrowserButton';
+import { WithdrawalNote } from '../components/WithdrawalNote';
 import { teamsAuthEndPath, useTeamsHost } from '../host';
 
 const useStyles = makeStyles({
@@ -32,6 +38,11 @@ const useStyles = makeStyles({
     alignItems: 'center',
     gap: tokens.spacingHorizontalM,
     flexWrap: 'wrap',
+  },
+  route: {
+    display: 'flex',
+    flexDirection: 'column',
+    rowGap: tokens.spacingVerticalS,
   },
 });
 
@@ -61,8 +72,21 @@ export function StartingCard() {
  * A control rather than a spinner, and never an automatic popup: a window opened without a click
  * meets the pop-up blocker, and the person is left looking at a tab that is doing nothing for a
  * reason nothing on screen explains.
+ *
+ * The administrator's route is always on the card, below the button and quieter than it, rather
+ * than shown once the button has failed. Whether this person may approve for themselves is not
+ * something TodoWerk can know before Microsoft has answered, and Microsoft's answer when they may
+ * not is a page of its own that never comes back here — so a card that waited for the failure
+ * would never show the route to the person who needs it.
  */
-export function ConsentRequiredCard({ onGranted }: { onGranted: () => void }) {
+export function ConsentRequiredCard({
+  onGranted,
+  approvalLink,
+}: {
+  onGranted: () => void;
+  /** From the consent-required refusal; see `TabSession`. */
+  approvalLink: string | null;
+}) {
   const styles = useStyles();
   const host = useTeamsHost();
   const [running, setRunning] = useState(false);
@@ -108,7 +132,80 @@ export function ConsentRequiredCard({ onGranted }: { onGranted: () => void }) {
         Approving does not give TodoWerk access to anybody else's tasks, and it reaches nobody who
         has not signed in.
       </Caption1>
+      <WithdrawalNote />
+      <Divider />
+      <AdministratorRoute approvalLink={approvalLink} />
     </Frame>
+  );
+}
+
+/** How the last attempt to copy the Approval Link went. */
+type CopyOutcome = 'not-tried' | 'copied' | 'refused';
+
+/**
+ * The second way on: a link for somebody else to open.
+ *
+ * Built for the administrator who keeps a separate account for administration. They will not open
+ * this tab with that account and should not sign in to TodoWerk with it, so what they are given is
+ * an address to open in a browser where that account is signed in — and the instruction to do
+ * exactly that, because opening it as anybody else gets them Microsoft's refusal again.
+ *
+ * Copying can be refused. The clipboard is not offered outside a secure context, and a frame whose
+ * host did not delegate the permission is refused it — and which of the hosts this tab runs in do
+ * is not something the tab can know before trying. So a refusal shows the link itself, selectable,
+ * instead of a button that silently did nothing.
+ */
+function AdministratorRoute({ approvalLink }: { approvalLink: string | null }) {
+  const styles = useStyles();
+  const [outcome, setOutcome] = useState<CopyOutcome>('not-tried');
+
+  // The unbound start when the server sent no link, which it does not on this card. An
+  // administrator who opens it can still approve; TodoWerk just cannot record that they did,
+  // which is what an Approval Link the server could not believe comes to as well.
+  const link = approvalLink ?? new URL(tenantConsentUrl, window.location.origin).toString();
+
+  const copy = () => {
+    // Through a resolved promise, so a clipboard that throws rather than rejects — or is not there
+    // at all — lands in the same place as one that says no.
+    void Promise.resolve()
+      .then(() => navigator.clipboard.writeText(link))
+      .then(
+        () => setOutcome('copied'),
+        () => setOutcome('refused'),
+      );
+  };
+
+  return (
+    <div className={styles.route}>
+      <Caption1Strong>
+        Can't approve it yourself? An administrator can approve it once for everyone.
+      </Caption1Strong>
+      <div className={styles.actions}>
+        <Button appearance="secondary" icon={<CopyRegular />} onClick={copy}>
+          Copy link for your administrator
+        </Button>
+      </div>
+      {outcome === 'copied' && (
+        <Caption1 role="status">Link copied. Send it to your administrator.</Caption1>
+      )}
+      {outcome === 'refused' && (
+        <>
+          <Caption1 role="status">
+            This window does not let TodoWerk copy. Select the link and copy it yourself.
+          </Caption1>
+          <Input
+            readOnly
+            value={link}
+            aria-label="Link for your administrator"
+            onFocus={(event) => event.currentTarget.select()}
+          />
+        </>
+      )}
+      <Caption1>
+        Open it signed in with an administrator account.{' '}
+        <HandbookLink href={administratorsPath}>What approval grants</HandbookLink>
+      </Caption1>
+    </div>
   );
 }
 

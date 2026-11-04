@@ -3,6 +3,7 @@ import { signInUrl } from '../api/client';
 import { useEntraRoundTrip } from '../host';
 import { CentredScreen } from './CentredScreen';
 import { HandbookLink, administratorsPath } from './HandbookLink';
+import { WithdrawalNote } from './WithdrawalNote';
 
 const useStyles = makeStyles({
   card: {
@@ -99,11 +100,14 @@ export function SignInPrompt() {
         <Title2 as="h2">{title(outcome)}</Title2>
         <Body1>{body(outcome)}</Body1>
         {outcome === 'not-approved' && (
-          <Caption1>
-            Approving covers everyone in the organisation and grants TodoWerk nothing it is not
-            already asking each person for.{' '}
-            <HandbookLink href={administratorsPath}>What approval grants</HandbookLink>
-          </Caption1>
+          <>
+            <Caption1>
+              Approving covers everyone in the organisation and grants TodoWerk nothing it is not
+              already asking each person for.{' '}
+              <HandbookLink href={administratorsPath}>What approval grants</HandbookLink>
+            </Caption1>
+            <WithdrawalNote />
+          </>
         )}
         <div className={styles.actions}>
           {/*

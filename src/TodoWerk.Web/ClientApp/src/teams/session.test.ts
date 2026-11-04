@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../api/http';
-import { consentRequiredCode, establishSession } from './session';
+import { approvalLinkExtension, consentRequiredCode, establishSession } from './session';
 import type { TabSessionGateway } from './session';
 
 /**
@@ -36,7 +36,42 @@ describe('establishSession', () => {
       gateway({ exchange: vi.fn().mockRejectedValue(consentRequired) }),
     );
 
-    expect(result).toEqual({ kind: 'consentRequired' });
+    expect(result).toEqual({ kind: 'consentRequired', approvalLink: null });
+  });
+
+  /**
+   * The link for an administrator travels on the same refusal, and is the server's to mint: the
+   * tab passes on exactly what it was given rather than building an address of its own.
+   */
+  it('passes on the Approval Link the consent refusal carries', async () => {
+    const link = 'https://todowerk.test/auth/tenant-consent?approval=CfDJ8-minted-here';
+
+    const result = await establishSession(
+      gateway({
+        exchange: vi.fn().mockRejectedValue(
+          new ApiError({
+            status: 401,
+            title: 'Not authorized',
+            code: consentRequiredCode,
+            [approvalLinkExtension]: link,
+          }),
+        ),
+      }),
+    );
+
+    expect(result).toEqual({ kind: 'consentRequired', approvalLink: link });
+  });
+
+  it('passes on nothing it could not use as a link', async () => {
+    const result = await establishSession(
+      gateway({
+        exchange: vi.fn().mockRejectedValue(
+          new ApiError({ status: 401, code: consentRequiredCode, [approvalLinkExtension]: 42 }),
+        ),
+      }),
+    );
+
+    expect(result).toEqual({ kind: 'consentRequired', approvalLink: null });
   });
 
   /**

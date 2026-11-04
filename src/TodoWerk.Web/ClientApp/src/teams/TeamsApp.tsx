@@ -83,7 +83,9 @@ export function TeamsApp({ host, acquireToken, initialTheme, subscribeToTheme }:
     <FluentProvider theme={teamsThemeFor(themeName)}>
       <TeamsHostProvider host={host} onSessionEnded={sessionEnded}>
         {session === null && <StartingCard />}
-        {session?.kind === 'consentRequired' && <ConsentRequiredCard onGranted={retry} />}
+        {session?.kind === 'consentRequired' && (
+          <ConsentRequiredCard onGranted={retry} approvalLink={session.approvalLink} />
+        )}
         {session?.kind === 'cookiesBlocked' && <CookiesBlockedCard />}
         {session?.kind === 'erased' && <ErasedCard />}
         {session?.kind === 'failed' && <TabFailureCard message={session.message} onRetry={retry} />}
