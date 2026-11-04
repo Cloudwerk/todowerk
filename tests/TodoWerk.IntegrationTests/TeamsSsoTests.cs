@@ -242,6 +242,87 @@ public sealed class TeamsSsoTests(SqlServerDatabaseFixture database) : IClassFix
     }
 
     /// <summary>
+    /// The consent card's second way on: a link this person can hand to an administrator, which
+    /// approves for the organisation their Teams sign-in named. Followed here the way the
+    /// administrator would follow it — in another browser, signed in to nothing — through to a
+    /// recorded grant, because a link that came back and could not record anything would be the
+    /// old invitation with extra steps.
+    /// <para>
+    /// The token names a tenant other than the deployment's own, so "addressed to the person's
+    /// tenant" cannot pass by being addressed to the deployment's.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task WithoutConsentForTheGraphScopes_TheAnswerCarriesAnApprovalLinkForThePersonsTenant()
+    {
+        const string personsTenant = "33333333-3333-3333-3333-333333333333";
+
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        await using var host = await SignInTestHost.StartAsync(
+            database.ConnectionString,
+            cancellationToken,
+            refuseOnBehalfOfWith: FakeEntraAndGraphHandler.ConsentRequiredError);
+
+        using var response = await host.ExchangeTeamsSsoAsync(
+            TeamsSsoToken.Mint(tenantId: personsTenant),
+            cancellationToken);
+
+        Assert.Equal("TeamsSso.ConsentRequired", await CodeOf(response, cancellationToken));
+
+        var link = await ApprovalLinkOf(response, cancellationToken);
+
+        Assert.NotNull(link);
+
+        // Absolute and on this deployment, because it is going to be pasted into a chat and opened
+        // somewhere that knows nothing of the tab it came from.
+        Assert.True(link.IsAbsoluteUri);
+        Assert.Equal("localhost", link.Host);
+        Assert.Equal("/auth/tenant-consent", link.AbsolutePath);
+
+        var start = await host.StartTenantConsentAsync(
+            session: null,
+            cancellationToken,
+            approval: SignInTestHost.ApprovalTokenOf(link));
+
+        Assert.Contains(
+            $"/{personsTenant}/v2.0/adminconsent",
+            start.Location?.ToString() ?? string.Empty,
+            StringComparison.Ordinal);
+
+        using (await host.CompleteTenantConsentResponseAsync(
+            session: null,
+            adminConsent: "True",
+            tenant: personsTenant,
+            cancellationToken,
+            approval: SignInTestHost.ApprovalTokenOf(link)))
+        {
+        }
+
+        Assert.True(await host.IsTenantConsentGrantedAsync(personsTenant, cancellationToken));
+    }
+
+    /// <summary>
+    /// Only the consent answer carries a link. A tenant whose exchange is broken for a reason no
+    /// approval fixes must not be told that an administrator could fix it.
+    /// </summary>
+    [Fact]
+    public async Task AFailureNoConsentScreenFixes_CarriesNoApprovalLink()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        await using var host = await SignInTestHost.StartAsync(
+            database.ConnectionString,
+            cancellationToken,
+            refuseOnBehalfOfWith: FakeEntraAndGraphHandler.InvalidClientError);
+
+        using var response = await host.ExchangeTeamsSsoAsync(TeamsSsoToken.Mint(), cancellationToken);
+
+        Assert.Equal("TeamsSso.ExchangeFailed", await CodeOf(response, cancellationToken));
+        Assert.Null(await ApprovalLinkOf(response, cancellationToken));
+    }
+
+    /// <summary>
     /// And the failure that looks nothing like consent from the outside and everything like it from
     /// the inside — the exchange refused, no session, an exception out of MSAL. If this carried the
     /// consent code the tenant would be sent through a popup that changes nothing, on a loop.
@@ -294,6 +375,19 @@ public sealed class TeamsSsoTests(SqlServerDatabaseFixture database) : IClassFix
         using var problem = JsonDocument.Parse(body);
 
         return problem.RootElement.TryGetProperty("code", out var code) ? code.GetString() : null;
+    }
+
+    /// <summary>The problem's <c>approvalLink</c> extension, which is what the consent card copies.</summary>
+    private static async Task<Uri?> ApprovalLinkOf(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        using var problem = JsonDocument.Parse(body);
+
+        return problem.RootElement.TryGetProperty(Web.Endpoints.TeamsEndpoints.ApprovalLinkExtension, out var link)
+            && link.GetString() is { } value
+                ? new Uri(value, UriKind.RelativeOrAbsolute)
+                : null;
     }
 
     private sealed record SessionUserPayload(string DisplayName, string Username);

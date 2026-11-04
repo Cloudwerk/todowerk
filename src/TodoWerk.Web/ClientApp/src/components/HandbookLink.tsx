@@ -4,16 +4,25 @@ import type { ReactNode } from 'react';
 import { useTeamsHost } from '../host';
 
 /**
- * The Administrator's Guide, which two surfaces link to directly rather than as one of the
- * documents: the sign-in card, when a consent decision is what stopped somebody, and the Tenant
- * Consent invitation on the Tenant Overview. Both are deep links to a particular page for a
- * particular reason, so neither reads the document list. The address is written once here rather
+ * The Administrator's Guide, which three surfaces link to directly rather than as one of the
+ * documents: the sign-in card and the tab's consent card, when a consent decision is what stopped
+ * somebody, and the Tenant Consent invitation on the Tenant Overview. All are deep links to a
+ * particular page for a particular reason, so none reads the document list. The address is written once here rather
  * than in each of them, so a path change has one place to reach, and `HandbookPageTests` asserts
  * the server still serves it.
  *
  * Server half: `HandbookPages.AdministratorsPath`.
  */
 export const administratorsPath = '/administrators';
+
+/**
+ * The same page at its section on withdrawing approval, which both consent cards point at before
+ * anybody approves: somebody deciding whether to say yes is entitled to know how to take it back.
+ * The anchor is the heading's own id, set in `handbook/administrators.md` rather than derived from
+ * its words, so rewording the heading cannot break the link; `HandbookPageTests` asserts the page
+ * still carries it.
+ */
+export const administratorsRevokingPath = `${administratorsPath}#revoking`;
 
 // The pop-out glyph after a link that leaves the frame, so the link says so before it is clicked.
 // In the browser SPA the same link opens a new tab, which is the same promise.

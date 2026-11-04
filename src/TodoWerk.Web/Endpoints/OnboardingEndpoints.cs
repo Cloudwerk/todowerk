@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Identity.Web;
 using TodoWerk.Application.Abstractions.Messaging;
@@ -18,6 +19,12 @@ internal static class OnboardingEndpoints
 {
     /// <summary>Where the browser is put back after a consent round trip: the screen it started on.</summary>
     private const string TenantOverviewRoute = "/tenant";
+
+    /// <summary>
+    /// Where a round trip with no screen of its own ends: the card in front of the sign-in, which
+    /// reads <see cref="ConsentParameter"/>.
+    /// </summary>
+    private const string FrontDoorRoute = "/";
 
     /// <summary>
     /// How the front door learns how a consent round trip ended, for the one that began there:
@@ -107,7 +114,9 @@ internal static class OnboardingEndpoints
 
         // Browser navigation, not fetch: the response is a redirect to Microsoft's admin-consent
         // endpoint. The tenant being approved is the caller's own — never one they could name in a
-        // parameter — so the session says which it is when there is one.
+        // parameter — so the session says which it is when there is one. The Approval Link below
+        // is a parameter, but not one anybody can write: only this deployment can mint it, and only
+        // from an identity it had already validated.
         //
         // Anonymous rather than behind the API policy, and that is load-bearing rather than a
         // convenience: the second person this link is for is the one whose sign-in has just ended
@@ -116,20 +125,58 @@ internal static class OnboardingEndpoints
         // deployment's own authority and Microsoft asks whoever presses it to sign in, which is
         // also the only way an administrator who is not this person can approve from this screen.
         // Nothing is recorded when such a flow comes back; see TenantConsentFlow.Start.
+        //
+        // The third caller is an administrator following an Approval Link somebody handed them,
+        // who has no session either and is the reason the link exists. The link names its tenant,
+        // so their flow is bound exactly as a session's would be and an approval through it is
+        // recorded (ADR-0015).
         app.MapGet(
                 TenantConsentFlow.StartPath,
                 async (
                     HttpContext context,
                     TenantConsentFlow flow,
+                    ApprovalLink approvalLink,
                     IHostEnvironment environment,
-                    string? returnUrl = null) =>
+                    ILoggerFactory loggerFactory,
+                    string? returnUrl = null,
+                    [FromQuery(Name = ApprovalLink.Parameter)] string? approval = null) =>
                 {
                     var session = await context.AuthenticateAsync(
                         CookieAuthenticationDefaults.AuthenticationScheme);
 
-                    var tenantId = session.Principal?.GetTenantId() is { Length: > 0 } signedInTenant
-                        ? signedInTenant
+                    var signedInTenant = session.Principal?.GetTenantId() is { Length: > 0 } fromSession
+                        ? fromSession
                         : null;
+
+                    var linkedTenant = approvalLink.TenantFrom(approval);
+
+                    // A link that cannot be believed is treated as no link at all, the way a
+                    // return URL that is not local is treated as none: the administrator holding
+                    // it is still taken to Microsoft and can still approve — an approval is worth
+                    // having whether or not TodoWerk can record it — and the flow is simply as
+                    // unbound as it would have been without one. Refusing outright would turn a
+                    // link a week too old into an organisation that cannot approve from here at
+                    // all. The line is for the operator asking why that approval left no record.
+                    if (!string.IsNullOrEmpty(approval) && linkedTenant is null)
+                    {
+                        var logger = loggerFactory.CreateLogger(typeof(OnboardingEndpoints));
+
+                        if (logger.IsEnabled(LogLevel.Information))
+                        {
+                            logger.LogInformation(
+                                "An Approval Link was opened that this deployment cannot believe: "
+                                + "older than {LifetimeDays} days, altered, or protected by a key "
+                                + "it no longer holds. The approval continues unbound and will "
+                                + "record nothing.",
+                                ApprovalLink.Lifetime.TotalDays);
+                        }
+                    }
+
+                    // The link wins over a session when both are present and disagree. The link
+                    // names the organisation whoever sent it was asking for, and the person who
+                    // opens it signed in elsewhere — a consultant, an administrator of several
+                    // tenants — means to approve that one, not their own.
+                    var tenantId = linkedTenant ?? signedInTenant;
 
                     var request = context.Request;
 
@@ -151,11 +198,25 @@ internal static class OnboardingEndpoints
                     // already in the air when a deploy lands is not refused on a payload shape.
                     // Local paths only, checked again on the way out: a value read from a cookie is
                     // a value from the client, and an unchecked one here is an open redirect.
-                    if (AuthEndpoints.IsLocalReturnUrl(returnUrl))
+                    //
+                    // A flow that came by an Approval Link goes back to the front door unless the
+                    // person who followed it is signed in to that same tenant. The Tenant Overview
+                    // is behind a sign-in, and the administrator the link was made for should not
+                    // be asked for one — signing in would make their administration account a
+                    // TodoWerk user, which a separate account exists not to be. The front door
+                    // reads the outcome and says whether it landed.
+                    var returnTo = AuthEndpoints.IsLocalReturnUrl(returnUrl)
+                        ? returnUrl
+                        : linkedTenant is not null
+                            && !string.Equals(linkedTenant, signedInTenant, StringComparison.OrdinalIgnoreCase)
+                                ? FrontDoorRoute
+                                : null;
+
+                    if (returnTo is not null)
                     {
                         context.Response.Cookies.Append(
                             ReturnCookieName,
-                            returnUrl!,
+                            returnTo,
                             StateCookie(environment, request));
                     }
 
@@ -244,7 +305,7 @@ internal static class OnboardingEndpoints
                     // the card that sent them reads it.
                     return Results.Redirect(startedFlow is { TenantId: null }
                         ? QueryHelpers.AddQueryString(
-                            "/",
+                            FrontDoorRoute,
                             ConsentParameter,
                             accepted ? Granted : NotGranted)
                         : TenantOverviewRoute);

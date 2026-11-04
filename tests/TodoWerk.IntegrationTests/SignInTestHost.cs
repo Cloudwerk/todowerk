@@ -1,10 +1,12 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using TodoWerk.Application.Abstractions.Authentication;
+using TodoWerk.Application.Onboarding;
 using TodoWerk.Domain.Changes;
 using TodoWerk.Domain.Indexing;
 using TodoWerk.Domain.Markers;
@@ -445,16 +447,33 @@ internal sealed class SignInTestHost : IAsyncDisposable
     /// Whose session starts it, or null for the caller the card behind a refused sign-in sends —
     /// who has none, and cannot be sent to get one.
     /// </param>
+    /// <param name="approval">
+    /// The token an Approval Link carries, for the administrator who was handed one — exactly as
+    /// it sits in the link's query, whether minted, altered or invented.
+    /// </param>
     internal async Task<ConsentRedirect> StartTenantConsentAsync(
         string? session,
         CancellationToken cancellationToken,
-        string? returnUrl = null)
+        string? returnUrl = null,
+        string? approval = null)
     {
+        var query = new List<string>();
+
+        if (returnUrl is not null)
+        {
+            query.Add($"returnUrl={Uri.EscapeDataString(returnUrl)}");
+        }
+
+        if (approval is not null)
+        {
+            query.Add($"{ApprovalLink.Parameter}={Uri.EscapeDataString(approval)}");
+        }
+
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            returnUrl is null
+            query.Count == 0
                 ? TenantConsentFlow.StartPath
-                : $"{TenantConsentFlow.StartPath}?returnUrl={Uri.EscapeDataString(returnUrl)}");
+                : $"{TenantConsentFlow.StartPath}?{string.Join('&', query)}");
 
         if (!string.IsNullOrEmpty(session))
         {
@@ -486,9 +505,10 @@ internal sealed class SignInTestHost : IAsyncDisposable
         string? tenant,
         CancellationToken cancellationToken,
         string? error = null,
-        string? returnUrl = null)
+        string? returnUrl = null,
+        string? approval = null)
     {
-        var started = await StartTenantConsentAsync(session, cancellationToken, returnUrl);
+        var started = await StartTenantConsentAsync(session, cancellationToken, returnUrl, approval);
 
         var query = new List<string> { $"state={Uri.EscapeDataString(started.State)}" };
 
@@ -539,6 +559,34 @@ internal sealed class SignInTestHost : IAsyncDisposable
 
         return response.StatusCode;
     }
+
+    /// <summary>
+    /// Whether a grant is on record for a tenant, asked of the store rather than of the Tenant
+    /// Overview: the overview only ever answers for the tenant of whoever is signed in, and the
+    /// administrator an Approval Link is made for is not signed in at all.
+    /// </summary>
+    internal async Task<bool> IsTenantConsentGrantedAsync(string tenantId, CancellationToken cancellationToken)
+    {
+        await using var scope = Scope();
+
+        return await scope.ServiceProvider.GetRequiredService<ITenantConsentStore>()
+            .IsGrantedAsync(tenantId, cancellationToken);
+    }
+
+    /// <summary>
+    /// The token of an Approval Link for a tenant, minted with this host's own key ring exactly as
+    /// the Teams exchange mints one — or as of another moment, for the link that has outlived its
+    /// week. The class doing the minting is the product's; only the clock is the test's.
+    /// </summary>
+    internal string MintApprovalToken(string tenantId, TimeProvider? clock = null) =>
+        ApprovalTokenOf(new ApprovalLink(
+                Factory.Services.GetRequiredService<IDataProtectionProvider>(),
+                clock ?? TimeProvider.System)
+            .For(tenantId, new Uri("http://localhost")));
+
+    /// <summary>The token out of an Approval Link, as the start endpoint would read it.</summary>
+    internal static string ApprovalTokenOf(Uri link) =>
+        System.Web.HttpUtility.ParseQueryString(link.Query)[ApprovalLink.Parameter] ?? string.Empty;
 
     /// <summary>Where an administrator was sent, and what has to come back with them.</summary>
     internal sealed record ConsentRedirect(

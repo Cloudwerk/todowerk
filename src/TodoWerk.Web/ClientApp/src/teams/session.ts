@@ -8,14 +8,25 @@ import { ApiError } from '../api/http';
  */
 export const consentRequiredCode = 'TeamsSso.ConsentRequired';
 
+/**
+ * Where the consent-required problem carries the Approval Link: the address this person can hand
+ * to an administrator, which approves for their organisation and is recorded even though the
+ * administrator never signs in here (ADR-0015). Mirrors `TeamsEndpoints.ApprovalLinkExtension`.
+ */
+export const approvalLinkExtension = 'approvalLink';
+
 export type TabSession =
   /** The exchange succeeded and the session cookie is being sent back. */
   | { kind: 'ready' }
   /**
    * The tenant has not approved TodoWerk and this person has not either, so the on-behalf-of
    * exchange had nothing to exchange for. The expected first run of every such tenant.
+   *
+   * The Approval Link rides along because this is the only answer the tab gets before it has a
+   * session, and the link is minted from the very sign-in that was just refused. Null only when
+   * the server sent none, which it does not on this code; the card copes rather than trusting that.
    */
-  | { kind: 'consentRequired' }
+  | { kind: 'consentRequired'; approvalLink: string | null }
   /**
    * The exchange succeeded and the very next request came back 401 — which means the cookie the
    * exchange set did not survive the frame. Nothing else produces that pair.
@@ -73,7 +84,13 @@ export async function establishSession(gateway: TabSessionGateway): Promise<TabS
     await gateway.exchange(token);
   } catch (error) {
     if (error instanceof ApiError && error.problem.code === consentRequiredCode) {
-      return { kind: 'consentRequired' };
+      const approvalLink = error.problem[approvalLinkExtension];
+
+      return {
+        kind: 'consentRequired',
+        approvalLink:
+          typeof approvalLink === 'string' && approvalLink.length > 0 ? approvalLink : null,
+      };
     }
 
     return { kind: 'failed', message: describe(error) };

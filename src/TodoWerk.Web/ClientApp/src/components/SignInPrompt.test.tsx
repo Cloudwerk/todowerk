@@ -41,6 +41,7 @@ describe('SignInPrompt', () => {
     expect(screen.getByRole('link', { name: /sign in with microsoft/i })).toBeTruthy();
     expect(screen.queryByRole('link', { name: /approve for your organisation/i })).toBeNull();
     expect(document.body.textContent ?? '').not.toMatch(/declined|approved/i);
+    expect(screen.queryByRole('link', { name: /how to withdraw it/i })).toBeNull();
   });
 
   /**
@@ -59,6 +60,28 @@ describe('SignInPrompt', () => {
     expect(
       screen.getByRole('link', { name: /what approval grants/i }).getAttribute('href'),
     ).toContain('/administrators');
+  });
+
+  /**
+   * How to undo an approval, said on the card that asks for one — before anybody decides, which is
+   * when an administrator asks it.
+   */
+  it('says how to withdraw an approval on the card that asks for one', () => {
+    show('/?signin=not-approved');
+
+    expect(document.body.textContent ?? '').toMatch(
+      /you or your administrator can withdraw this at any time/i,
+    );
+    expect(
+      screen.getByRole('link', { name: /how to withdraw it/i }).getAttribute('href'),
+    ).toMatch(/\/administrators#revoking$/);
+  });
+
+  /** The browser card has no Approval Link to offer: a refused sign-in names no tenant. */
+  it('offers no link to copy for an administrator', () => {
+    show('/?signin=not-approved');
+
+    expect(screen.queryByRole('button', { name: /copy link/i })).toBeNull();
   });
 
   /** Neither reading may be asserted, because Microsoft's answer does not distinguish them. */

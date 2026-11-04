@@ -57,6 +57,7 @@ public static class OnboardingServiceCollectionExtensions
 
         services.AddScoped<ITenantConsentStore, TenantConsentStore>();
         services.AddScoped<TenantConsentFlow>();
+        services.AddScoped<ApprovalLink>();
 
         // Registered by its own type: sweeping is the worker's to do, not a request-path caller's.
         services.AddScoped<RetentionSweep>();
