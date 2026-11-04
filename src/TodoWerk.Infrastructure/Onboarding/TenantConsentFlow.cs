@@ -40,9 +40,10 @@ public sealed class TenantConsentFlow(
     public const string StateCookieName = "todowerk.tenant-consent";
 
     /// <summary>
-    /// Stands in the state for a flow that began without a session, so nothing knew whose tenant
-    /// it was for. A character no tenant id can contain, so it can never accidentally match one
-    /// coming back — which is the whole of what keeps such a flow out of the grant table.
+    /// Stands in the state for a flow that began with neither a session nor an Approval Link, so
+    /// nothing knew whose tenant it was for. A character no tenant id can contain, so it can never
+    /// accidentally match one coming back — which is the whole of what keeps such a flow out of
+    /// the grant table.
     /// </summary>
     private const string NoTenantKnown = "*";
 
@@ -52,18 +53,29 @@ public sealed class TenantConsentFlow(
     /// The admin-consent URL, and the cookie value that remembers which tenant it was for.
     /// </summary>
     /// <param name="tenantId">
-    /// The tenant being approved, from the session of whoever started the flow — or null when
-    /// nobody is signed in, which is the person who has just been told their organisation has to
-    /// approve TodoWerk before they can use it. Then the flow is addressed to this deployment's
-    /// own authority and Microsoft resolves the tenant from whoever signs in to approve.
+    /// The tenant being approved, from the session of whoever started the flow or from the
+    /// <see cref="ApprovalLink"/> they followed — or null when there is neither, which is the
+    /// person who has just been told in a browser that their organisation has to approve TodoWerk
+    /// before they can use it. Then the flow is addressed to this deployment's own authority and
+    /// Microsoft resolves the tenant from whoever signs in to approve.
     /// <para>
     /// A flow started that way records no grant when it comes back, whatever it comes back with.
     /// The <c>tenant</c> parameter on the way back is forgeable — Microsoft's own guidance says so
     /// and this class exists to act on it — and the state is the only thing that makes it
-    /// believable. Without a session there is nothing to bind the state to, so the round trip can
-    /// tell somebody what happened and nothing more. The consequence is the one already written
-    /// down: TodoWerk cannot see consent granted outside itself, and an administrator who approves
-    /// this way keeps seeing the invitation until somebody approves from inside the product.
+    /// believable. Without a tenant known in advance there is nothing to bind the state to, so the
+    /// round trip can tell somebody what happened and nothing more. The consequence is the one
+    /// already written down: TodoWerk cannot see consent granted outside itself, and an
+    /// administrator who approves this way keeps seeing the invitation until somebody approves
+    /// from inside the product.
+    /// </para>
+    /// <para>
+    /// An Approval Link is the one way to be bound without a session, and it is the answer to the
+    /// administrator who keeps a separate account for administration and so never has one. It
+    /// carries a tenant read off a Teams sign-in this deployment had already validated, so the
+    /// state is bound exactly as a session would bind it and the callback's rule is unchanged
+    /// ([ADR-0015](../../../docs/adr/0015-an-approval-link-carries-its-tenant.md)). The browser's
+    /// refused sign-in has no such tenant to offer — a failed authorization returns no identity
+    /// to read one off — so its flow stays unbound.
     /// </para>
     /// </param>
     public (Uri Url, string State, string StateCookie) Start(string? tenantId, Uri redirectUri)
@@ -94,7 +106,7 @@ public sealed class TenantConsentFlow(
     /// <summary>
     /// The tenant this flow was started for, or null when there is no reason to believe it was.
     /// Null covers every way that can happen — no cookie, a cookie this deployment cannot decrypt,
-    /// a state that does not match, an expired one, a flow that began without a session, or a
+    /// a state that does not match, an expired one, a flow that began knowing no tenant, or a
     /// redirect omitting the tenant or naming a different one than the flow began for.
     /// </summary>
     /// <remarks>
@@ -158,7 +170,7 @@ public sealed class TenantConsentFlow(
 
 /// <summary>A Tenant Consent round trip that left from this deployment.</summary>
 /// <param name="TenantId">
-/// The tenant it began for, or null when it began without a session and nothing may be recorded on
-/// the strength of what comes back.
+/// The tenant it began for, or null when it began with neither a session nor an Approval Link and
+/// nothing may be recorded on the strength of what comes back.
 /// </param>
 public sealed record StartedConsentFlow(string? TenantId);

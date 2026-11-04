@@ -7,9 +7,11 @@ internal static class ErrorResults
 {
     /// <param name="extensions">
     /// Anything else this particular refusal carries, beside the <c>code</c> every problem here
-    /// has. One caller uses it: the licence gate puts the operator's contact on the ended card's
-    /// problem, because that card is the one place in the product with nowhere else to send
-    /// somebody and the address is a Web-layer setting a domain error cannot reach.
+    /// has. Two callers use it, for the same reason: each refusal is the only thing its card is
+    /// given, and what the card needs is something a domain error cannot reach. The licence gate
+    /// puts the operator's contact on the ended card's problem, because that card has nowhere else
+    /// to send somebody and the address is a Web-layer setting; the Teams exchange puts an Approval
+    /// Link on the consent card's, because the link is built from the request's own host.
     /// </param>
     public static IResult ToProblem(this Error error, IReadOnlyDictionary<string, object?>? extensions = null)
     {

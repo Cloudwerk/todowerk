@@ -13,14 +13,19 @@ namespace TodoWerk.Infrastructure.Authentication;
 /// different one — a broken tenant that looked like this one would loop through a popup forever.
 /// </para>
 /// </summary>
-internal static class TeamsSsoErrors
+public static class TeamsSsoErrors
 {
     /// <summary>
     /// Nobody has consented to the Graph permission for this person yet. Answered as 401 rather
     /// than 403: the caller has no usable session, and the thing that fixes it is an interactive
     /// sign-in — which is what the consent popup runs.
+    /// <para>
+    /// The one member the Web layer reads, because its answer carries something no other failure
+    /// here does: an Approval Link for the person to hand to an administrator, built from the
+    /// request's own host, which this layer does not see (ADR-0015).
+    /// </para>
     /// </summary>
-    internal static readonly Error ConsentRequired = Error.Unauthorized(
+    public static readonly Error ConsentRequired = Error.Unauthorized(
         "TeamsSso.ConsentRequired",
         "TodoWerk has not been approved for your account yet. Approve it once and this tab will "
         + "sign you in silently from then on.");

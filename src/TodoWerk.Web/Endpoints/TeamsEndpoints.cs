@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.Identity.Web;
 using TodoWerk.Infrastructure.Authentication;
+using TodoWerk.Infrastructure.Onboarding;
 using TodoWerk.Web.Security;
 
 namespace TodoWerk.Web.Endpoints;
@@ -11,6 +13,13 @@ namespace TodoWerk.Web.Endpoints;
 /// </summary>
 internal static class TeamsEndpoints
 {
+    /// <summary>
+    /// The name the consent card reads the Approval Link from, on the consent-required refusal and
+    /// no other. Client half: <c>approvalLinkExtension</c> in
+    /// <c>ClientApp/src/teams/session.ts</c>.
+    /// </summary>
+    internal const string ApprovalLinkExtension = "approvalLink";
+
     public static IEndpointRouteBuilder MapTeamsEndpoints(this IEndpointRouteBuilder app)
     {
         // The tab's own document. Anonymous, because a tab that answered 401 would render
@@ -37,13 +46,28 @@ internal static class TeamsEndpoints
                 async (
                     HttpContext context,
                     TeamsSsoSignIn signIn,
+                    ApprovalLink approvalLink,
                     CancellationToken cancellationToken) =>
                 {
                     var exchanged = await signIn.ExchangeAsync(context.User, cancellationToken);
 
                     if (exchanged.IsFailure)
                     {
-                        return exchanged.Error.ToProblem();
+                        // The consent card's second way on rides on its refusal. This is the one
+                        // moment TodoWerk holds a tenant id it can believe for somebody who cannot
+                        // get a session — the token was validated before this ran — and the person
+                        // most likely to need the link is the one whose own approval Microsoft is
+                        // about to refuse. Offered whatever their Licence, which nobody has asked
+                        // about yet: there is no session to ask it for.
+                        return exchanged.Error == TeamsSsoErrors.ConsentRequired
+                            && context.User.GetTenantId() is { Length: > 0 } tenantId
+                                ? exchanged.Error.ToProblem(new Dictionary<string, object?>(StringComparer.Ordinal)
+                                {
+                                    [ApprovalLinkExtension] = approvalLink
+                                        .For(tenantId, new Uri($"{context.Request.Scheme}://{context.Request.Host}"))
+                                        .AbsoluteUri,
+                                })
+                                : exchanged.Error.ToProblem();
                     }
 
                     await context.SignInAsync(
