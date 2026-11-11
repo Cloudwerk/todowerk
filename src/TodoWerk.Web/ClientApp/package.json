@@ -36,8 +36,8 @@
     "verify:bundles": "node scripts/verify-bundles.mjs"
   },
   "dependencies": {
-    "@fluentui/react-components": "^9.74.11",
-    "@fluentui/react-icons": "^2.0.344",
+    "@fluentui/react-components": "^9.75.1",
+    "@fluentui/react-icons": "^2.0.345",
     "@microsoft/teams-js": "^2.59.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
